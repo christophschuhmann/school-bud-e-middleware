@@ -1,0 +1,790 @@
+[2025-08-13 10:13:07] Using python: /mnt/md3/spirit/audiovenv/bin/python
+[2025-08-13 10:13:07] Working dir: /mnt/md3/spirit/middleware
+[2025-08-13 10:13:07] Logging to:  /mnt/md3/spirit/middleware/logs/buddy.out
+[2025-08-13 10:13:07] PID file:    /mnt/md3/spirit/middleware/buddy.pid
+[2025-08-13 10:13:07] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+INFO:     Started server process [2775137]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8787 (Press CTRL+C to quit)
+[2025-08-13 10:35:02] App exited with code 137
+[2025-08-13 10:35:04] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+INFO:     Started server process [2776388]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8787 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52994 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33536 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33556 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33566 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34468 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34496 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43160 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:56922 - "GET /static/admin.html HTTP/1.1" 200 OK
+INFO:     88.66.220.228:56922 - "GET /static/admin.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:43188 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57212 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57240 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47738 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47756 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60044 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60050 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45696 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45714 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35862 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35878 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46640 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46662 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45028 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45046 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36056 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36074 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49156 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49174 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46966 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46980 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40582 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40590 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42940 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42968 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46714 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46720 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53406 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53422 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50474 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50486 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52882 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52888 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58890 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58904 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45616 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45636 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57600 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57622 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58324 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58342 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53224 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52558 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52582 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43332 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43350 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44704 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44726 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53788 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53814 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35200 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35228 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50462 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50476 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56696 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56700 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34940 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34944 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37454 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57018 - "GET /static/admin.html HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57018 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57018 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37470 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36372 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36390 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57026 - "POST /admin/users HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57026 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40734 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57034 - "POST /admin/users//apikey HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40752 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47022 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47048 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60454 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60458 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39522 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57038 - "POST /admin/users/1/credits HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57038 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39532 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38062 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57039 - "POST /admin/users//project HTTP/1.1" 404 Not Found
+INFO:     88.66.220.228:57039 - "POST /admin/users//project HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:38080 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57042 - "POST /admin/users/1/project HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:60434 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60460 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60704 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57047 - "POST /admin/users/1/project HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 146, in execute
+    self._adapt_connection._handle_exception(error)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 298, in _handle_exception
+    raise error
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 128, in execute
+    self.await_(_cursor.execute(operation, parameters))
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 131, in await_only
+    return current.driver.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/cursor.py", line 48, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/cursor.py", line 40, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/core.py", line 132, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/core.py", line 115, in run
+    result = function()
+             ^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 399, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 70, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 148, in simple_response
+    await self.app(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 756, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 776, in app
+    await route.handle(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/fastapi/routing.py", line 278, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/middleware/admin.py", line 72, in assign_project
+    await session.commit()
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/session.py", line 1009, in commit
+    await greenlet_spawn(self.sync_session.commit)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2017, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1302, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1277, in _prepare_impl
+    self.session.flush()
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4341, in flush
+    self._flush(objects)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4476, in _flush
+    with util.safe_reraise():
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4437, in _flush
+    flush_context.execute()
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 85, in save_obj
+    _emit_update_statements(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+        ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2353, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 146, in execute
+    self._adapt_connection._handle_exception(error)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 298, in _handle_exception
+    raise error
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 128, in execute
+    self.await_(_cursor.execute(operation, parameters))
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 131, in await_only
+    return current.driver.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/cursor.py", line 48, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/cursor.py", line 40, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/core.py", line 132, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/core.py", line 115, in run
+    result = function()
+             ^^^^^^^^^^
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+[SQL: UPDATE users SET project_id=? WHERE users.id = ?]
+[parameters: (123, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+INFO:     127.0.0.1:60726 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     88.66.220.228:57048 - "POST /admin/users/1/project HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 146, in execute
+    self._adapt_connection._handle_exception(error)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 298, in _handle_exception
+    raise error
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 128, in execute
+    self.await_(_cursor.execute(operation, parameters))
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 131, in await_only
+    return current.driver.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/cursor.py", line 48, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/cursor.py", line 40, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/core.py", line 132, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/core.py", line 115, in run
+    result = function()
+             ^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 399, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 70, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 148, in simple_response
+    await self.app(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 756, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 776, in app
+    await route.handle(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/fastapi/routing.py", line 278, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/middleware/admin.py", line 72, in assign_project
+    await session.commit()
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/session.py", line 1009, in commit
+    await greenlet_spawn(self.sync_session.commit)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2017, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1302, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1277, in _prepare_impl
+    self.session.flush()
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4341, in flush
+    self._flush(objects)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4476, in _flush
+    with util.safe_reraise():
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4437, in _flush
+    flush_context.execute()
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 85, in save_obj
+    _emit_update_statements(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+        ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2353, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 146, in execute
+    self._adapt_connection._handle_exception(error)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 298, in _handle_exception
+    raise error
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py", line 128, in execute
+    self.await_(_cursor.execute(operation, parameters))
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 131, in await_only
+    return current.driver.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/cursor.py", line 48, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/cursor.py", line 40, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/core.py", line 132, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/mnt/md3/spirit/audiovenv/lib/python3.11/site-packages/aiosqlite/core.py", line 115, in run
+    result = function()
+             ^^^^^^^^^^
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+[SQL: UPDATE users SET project_id=? WHERE users.id = ?]
+[parameters: (123, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+INFO:     127.0.0.1:53994 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54002 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54020 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52422 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52444 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33166 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33182 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48598 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48624 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41218 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41242 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42724 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42748 - "GET /healthz HTTP/1.1" 200 OK
+[2025-08-13 10:43:02] App exited with code 137
+[2025-08-13 10:43:06] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+INFO:     Started server process [2776843]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8787 (Press CTRL+C to quit)
+INFO:     127.0.0.1:46478 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46494 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52660 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52674 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35708 - "GET /healthz HTTP/1.1" 200 OK
+[2025-08-13 10:43:29] App exited with code 137
+[2025-08-13 10:43:37] Port :8787 busy; waiting...
+[2025-08-13 10:43:38] Port :8787 busy; waiting...
+[2025-08-13 10:43:39] Port :8787 busy; waiting...
+[2025-08-13 10:43:40] Port :8787 busy; waiting...
+[2025-08-13 10:43:41] Port :8787 busy; waiting...
+[2025-08-13 10:43:42] Port :8787 busy; waiting...
+[2025-08-13 10:43:43] Port :8787 busy; waiting...
+[2025-08-13 10:43:44] Port :8787 busy; waiting...
+[2025-08-13 10:43:45] Port :8787 busy; waiting...
+[2025-08-13 10:43:46] Port :8787 busy; waiting...
+[2025-08-13 10:43:47] Port still busy. Trying anyway.
+[2025-08-13 10:43:47] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:43:48] App exited with code 0
+[2025-08-13 10:44:04] Port :8787 busy; waiting...
+[2025-08-13 10:44:05] Port :8787 busy; waiting...
+[2025-08-13 10:44:06] Port :8787 busy; waiting...
+[2025-08-13 10:44:07] Port :8787 busy; waiting...
+[2025-08-13 10:44:08] Port :8787 busy; waiting...
+[2025-08-13 10:44:09] Port :8787 busy; waiting...
+[2025-08-13 10:44:10] Port :8787 busy; waiting...
+[2025-08-13 10:44:11] Port :8787 busy; waiting...
+[2025-08-13 10:44:12] Port :8787 busy; waiting...
+[2025-08-13 10:44:14] Port :8787 busy; waiting...
+[2025-08-13 10:44:15] Port still busy. Trying anyway.
+[2025-08-13 10:44:15] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:44:15] App exited with code 0
+[2025-08-13 10:44:45] Port :8787 busy; waiting...
+[2025-08-13 10:44:46] Port :8787 busy; waiting...
+[2025-08-13 10:44:47] Port :8787 busy; waiting...
+[2025-08-13 10:44:48] Port :8787 busy; waiting...
+[2025-08-13 10:44:49] Port :8787 busy; waiting...
+[2025-08-13 10:44:50] Port :8787 busy; waiting...
+[2025-08-13 10:44:52] Port :8787 busy; waiting...
+[2025-08-13 10:44:53] Port :8787 busy; waiting...
+[2025-08-13 10:44:54] Port :8787 busy; waiting...
+[2025-08-13 10:44:55] Port :8787 busy; waiting...
+[2025-08-13 10:44:56] Port still busy. Trying anyway.
+[2025-08-13 10:44:56] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:44:56] App exited with code 0
+[2025-08-13 10:45:26] Port :8787 busy; waiting...
+[2025-08-13 10:45:27] Port :8787 busy; waiting...
+[2025-08-13 10:45:29] Port :8787 busy; waiting...
+[2025-08-13 10:45:30] Port :8787 busy; waiting...
+[2025-08-13 10:45:31] Port :8787 busy; waiting...
+[2025-08-13 10:45:32] Port :8787 busy; waiting...
+[2025-08-13 10:45:33] Port :8787 busy; waiting...
+[2025-08-13 10:45:34] Port :8787 busy; waiting...
+[2025-08-13 10:45:35] Port :8787 busy; waiting...
+[2025-08-13 10:45:36] Port :8787 busy; waiting...
+[2025-08-13 10:45:37] Port still busy. Trying anyway.
+[2025-08-13 10:45:37] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:45:38] App exited with code 0
+[2025-08-13 10:46:08] Port :8787 busy; waiting...
+[2025-08-13 10:46:09] Port :8787 busy; waiting...
+[2025-08-13 10:46:10] Port :8787 busy; waiting...
+[2025-08-13 10:46:11] Port :8787 busy; waiting...
+[2025-08-13 10:46:12] Port :8787 busy; waiting...
+[2025-08-13 10:46:13] Port :8787 busy; waiting...
+[2025-08-13 10:46:14] Port :8787 busy; waiting...
+[2025-08-13 10:46:15] Port :8787 busy; waiting...
+[2025-08-13 10:46:16] Port :8787 busy; waiting...
+[2025-08-13 10:46:17] Port :8787 busy; waiting...
+[2025-08-13 10:46:18] Port still busy. Trying anyway.
+[2025-08-13 10:46:18] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:46:19] App exited with code 0
+[2025-08-13 10:46:49] Port :8787 busy; waiting...
+[2025-08-13 10:46:50] Port :8787 busy; waiting...
+[2025-08-13 10:46:51] Port :8787 busy; waiting...
+[2025-08-13 10:46:52] Port :8787 busy; waiting...
+[2025-08-13 10:46:53] Port :8787 busy; waiting...
+[2025-08-13 10:46:54] Port :8787 busy; waiting...
+[2025-08-13 10:46:55] Port :8787 busy; waiting...
+[2025-08-13 10:46:56] Port :8787 busy; waiting...
+[2025-08-13 10:46:57] Port :8787 busy; waiting...
+[2025-08-13 10:46:59] Port :8787 busy; waiting...
+[2025-08-13 10:47:00] Port still busy. Trying anyway.
+[2025-08-13 10:47:00] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:47:00] App exited with code 0
+[2025-08-13 10:47:30] Port :8787 busy; waiting...
+[2025-08-13 10:47:31] Port :8787 busy; waiting...
+[2025-08-13 10:47:32] Port :8787 busy; waiting...
+[2025-08-13 10:47:33] Port :8787 busy; waiting...
+[2025-08-13 10:47:34] Port :8787 busy; waiting...
+[2025-08-13 10:47:35] Port :8787 busy; waiting...
+[2025-08-13 10:47:37] Port :8787 busy; waiting...
+[2025-08-13 10:47:38] Port :8787 busy; waiting...
+[2025-08-13 10:47:39] Port :8787 busy; waiting...
+[2025-08-13 10:47:40] Port :8787 busy; waiting...
+[2025-08-13 10:47:41] Port still busy. Trying anyway.
+[2025-08-13 10:47:41] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:47:41] App exited with code 0
+[2025-08-13 10:48:11] Port :8787 busy; waiting...
+[2025-08-13 10:48:12] Port :8787 busy; waiting...
+[2025-08-13 10:48:13] Port :8787 busy; waiting...
+[2025-08-13 10:48:15] Port :8787 busy; waiting...
+[2025-08-13 10:48:16] Port :8787 busy; waiting...
+[2025-08-13 10:48:17] Port :8787 busy; waiting...
+[2025-08-13 10:48:18] Port :8787 busy; waiting...
+[2025-08-13 10:48:19] Port :8787 busy; waiting...
+[2025-08-13 10:48:20] Port :8787 busy; waiting...
+[2025-08-13 10:48:21] Port :8787 busy; waiting...
+[2025-08-13 10:48:22] Port still busy. Trying anyway.
+[2025-08-13 10:48:22] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:48:23] App exited with code 0
+[2025-08-13 10:48:53] Port :8787 busy; waiting...
+[2025-08-13 10:48:54] Port :8787 busy; waiting...
+[2025-08-13 10:48:55] Port :8787 busy; waiting...
+[2025-08-13 10:48:56] Port :8787 busy; waiting...
+[2025-08-13 10:48:57] Port :8787 busy; waiting...
+[2025-08-13 10:48:58] Port :8787 busy; waiting...
+[2025-08-13 10:48:59] Port :8787 busy; waiting...
+[2025-08-13 10:49:00] Port :8787 busy; waiting...
+[2025-08-13 10:49:01] Port :8787 busy; waiting...
+[2025-08-13 10:49:02] Port :8787 busy; waiting...
+[2025-08-13 10:49:03] Port still busy. Trying anyway.
+[2025-08-13 10:49:03] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:49:04] App exited with code 0
+[2025-08-13 10:49:34] Port :8787 busy; waiting...
+[2025-08-13 10:49:35] Port :8787 busy; waiting...
+[2025-08-13 10:49:36] Port :8787 busy; waiting...
+[2025-08-13 10:49:37] Port :8787 busy; waiting...
+[2025-08-13 10:49:38] Port :8787 busy; waiting...
+[2025-08-13 10:49:39] Port :8787 busy; waiting...
+[2025-08-13 10:49:40] Port :8787 busy; waiting...
+[2025-08-13 10:49:41] Port :8787 busy; waiting...
+[2025-08-13 10:49:42] Port :8787 busy; waiting...
+[2025-08-13 10:49:43] Port :8787 busy; waiting...
+[2025-08-13 10:49:44] Port still busy. Trying anyway.
+[2025-08-13 10:49:45] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:49:45] App exited with code 0
+[2025-08-13 10:50:15] Port :8787 busy; waiting...
+[2025-08-13 10:50:16] Port :8787 busy; waiting...
+[2025-08-13 10:50:17] Port :8787 busy; waiting...
+[2025-08-13 10:50:18] Port :8787 busy; waiting...
+[2025-08-13 10:50:19] Port :8787 busy; waiting...
+[2025-08-13 10:50:20] Port :8787 busy; waiting...
+[2025-08-13 10:50:22] Port :8787 busy; waiting...
+[2025-08-13 10:50:23] Port :8787 busy; waiting...
+[2025-08-13 10:50:24] Port :8787 busy; waiting...
+[2025-08-13 10:50:25] Port :8787 busy; waiting...
+[2025-08-13 10:50:26] Port still busy. Trying anyway.
+[2025-08-13 10:50:26] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:50:26] App exited with code 0
+[2025-08-13 10:50:56] Port :8787 busy; waiting...
+[2025-08-13 10:50:57] Port :8787 busy; waiting...
+[2025-08-13 10:50:59] Port :8787 busy; waiting...
+[2025-08-13 10:51:00] Port :8787 busy; waiting...
+[2025-08-13 10:51:01] Port :8787 busy; waiting...
+[2025-08-13 10:51:02] Port :8787 busy; waiting...
+[2025-08-13 10:51:03] Port :8787 busy; waiting...
+[2025-08-13 10:51:04] Port :8787 busy; waiting...
+[2025-08-13 10:51:05] Port :8787 busy; waiting...
+[2025-08-13 10:51:06] Port :8787 busy; waiting...
+[2025-08-13 10:51:07] Port still busy. Trying anyway.
+[2025-08-13 10:51:07] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:51:08] App exited with code 0
+[2025-08-13 10:51:38] Port :8787 busy; waiting...
+[2025-08-13 10:51:39] Port :8787 busy; waiting...
+[2025-08-13 10:51:40] Port :8787 busy; waiting...
+[2025-08-13 10:51:41] Port :8787 busy; waiting...
+[2025-08-13 10:51:42] Port :8787 busy; waiting...
+[2025-08-13 10:51:43] Port :8787 busy; waiting...
+[2025-08-13 10:51:44] Port :8787 busy; waiting...
+[2025-08-13 10:51:45] Port :8787 busy; waiting...
+[2025-08-13 10:51:46] Port :8787 busy; waiting...
+[2025-08-13 10:51:47] Port :8787 busy; waiting...
+[2025-08-13 10:51:48] Port still busy. Trying anyway.
+[2025-08-13 10:51:48] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:51:49] App exited with code 0
+[2025-08-13 10:52:19] Port :8787 busy; waiting...
+[2025-08-13 10:52:20] Port :8787 busy; waiting...
+[2025-08-13 10:52:21] Port :8787 busy; waiting...
+[2025-08-13 10:52:22] Port :8787 busy; waiting...
+[2025-08-13 10:52:23] Port :8787 busy; waiting...
+[2025-08-13 10:52:24] Port :8787 busy; waiting...
+[2025-08-13 10:52:25] Port :8787 busy; waiting...
+[2025-08-13 10:52:26] Port :8787 busy; waiting...
+[2025-08-13 10:52:27] Port :8787 busy; waiting...
+[2025-08-13 10:52:29] Port :8787 busy; waiting...
+[2025-08-13 10:52:30] Port still busy. Trying anyway.
+[2025-08-13 10:52:30] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:52:30] App exited with code 0
+[2025-08-13 10:53:00] Port :8787 busy; waiting...
+[2025-08-13 10:53:01] Port :8787 busy; waiting...
+[2025-08-13 10:53:02] Port :8787 busy; waiting...
+[2025-08-13 10:53:03] Port :8787 busy; waiting...
+[2025-08-13 10:53:04] Port :8787 busy; waiting...
+[2025-08-13 10:53:05] Port :8787 busy; waiting...
+[2025-08-13 10:53:07] Port :8787 busy; waiting...
+[2025-08-13 10:53:08] Port :8787 busy; waiting...
+[2025-08-13 10:53:09] Port :8787 busy; waiting...
+[2025-08-13 10:53:10] Port :8787 busy; waiting...
+[2025-08-13 10:53:11] Port still busy. Trying anyway.
+[2025-08-13 10:53:11] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:53:11] App exited with code 0
+[2025-08-13 10:53:41] Port :8787 busy; waiting...
+[2025-08-13 10:53:42] Port :8787 busy; waiting...
+[2025-08-13 10:53:43] Port :8787 busy; waiting...
+[2025-08-13 10:53:45] Port :8787 busy; waiting...
+[2025-08-13 10:53:46] Port :8787 busy; waiting...
+[2025-08-13 10:53:47] Port :8787 busy; waiting...
+[2025-08-13 10:53:48] Port :8787 busy; waiting...
+[2025-08-13 10:53:49] Port :8787 busy; waiting...
+[2025-08-13 10:53:50] Port :8787 busy; waiting...
+[2025-08-13 10:53:51] Port :8787 busy; waiting...
+[2025-08-13 10:53:52] Port still busy. Trying anyway.
+[2025-08-13 10:53:52] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:53:53] App exited with code 0
+[2025-08-13 10:54:23] Port :8787 busy; waiting...
+[2025-08-13 10:54:24] Port :8787 busy; waiting...
+[2025-08-13 10:54:25] Port :8787 busy; waiting...
+[2025-08-13 10:54:26] Port :8787 busy; waiting...
+[2025-08-13 10:54:27] Port :8787 busy; waiting...
+[2025-08-13 10:54:28] Port :8787 busy; waiting...
+[2025-08-13 10:54:29] Port :8787 busy; waiting...
+[2025-08-13 10:54:30] Port :8787 busy; waiting...
+[2025-08-13 10:54:31] Port :8787 busy; waiting...
+[2025-08-13 10:54:32] Port :8787 busy; waiting...
+[2025-08-13 10:54:33] Port still busy. Trying anyway.
+[2025-08-13 10:54:33] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:54:34] App exited with code 0
+[2025-08-13 10:55:04] Port :8787 busy; waiting...
+[2025-08-13 10:55:05] Port :8787 busy; waiting...
+[2025-08-13 10:55:06] Port :8787 busy; waiting...
+[2025-08-13 10:55:07] Port :8787 busy; waiting...
+[2025-08-13 10:55:08] Port :8787 busy; waiting...
+[2025-08-13 10:55:09] Port :8787 busy; waiting...
+[2025-08-13 10:55:10] Port :8787 busy; waiting...
+[2025-08-13 10:55:11] Port :8787 busy; waiting...
+[2025-08-13 10:55:13] Port :8787 busy; waiting...
+[2025-08-13 10:55:14] Port :8787 busy; waiting...
+[2025-08-13 10:55:15] Port still busy. Trying anyway.
+[2025-08-13 10:55:15] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:55:15] App exited with code 0
+[2025-08-13 10:55:45] Port :8787 busy; waiting...
+[2025-08-13 10:55:46] Port :8787 busy; waiting...
+[2025-08-13 10:55:47] Port :8787 busy; waiting...
+[2025-08-13 10:55:48] Port :8787 busy; waiting...
+[2025-08-13 10:55:50] Port :8787 busy; waiting...
+[2025-08-13 10:55:51] Port :8787 busy; waiting...
+[2025-08-13 10:55:52] Port :8787 busy; waiting...
+[2025-08-13 10:55:53] Port :8787 busy; waiting...
+[2025-08-13 10:55:54] Port :8787 busy; waiting...
+[2025-08-13 10:55:55] Port :8787 busy; waiting...
+[2025-08-13 10:55:56] Port still busy. Trying anyway.
+[2025-08-13 10:55:56] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:55:56] App exited with code 0
+[2025-08-13 10:56:27] Port :8787 busy; waiting...
+[2025-08-13 10:56:28] Port :8787 busy; waiting...
+[2025-08-13 10:56:29] Port :8787 busy; waiting...
+[2025-08-13 10:56:30] Port :8787 busy; waiting...
+[2025-08-13 10:56:31] Port :8787 busy; waiting...
+[2025-08-13 10:56:32] Port :8787 busy; waiting...
+[2025-08-13 10:56:33] Port :8787 busy; waiting...
+[2025-08-13 10:56:34] Port :8787 busy; waiting...
+[2025-08-13 10:56:35] Port :8787 busy; waiting...
+[2025-08-13 10:56:36] Port :8787 busy; waiting...
+[2025-08-13 10:56:37] Port still busy. Trying anyway.
+[2025-08-13 10:56:37] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:56:38] App exited with code 0
+[2025-08-13 10:57:08] Port :8787 busy; waiting...
+[2025-08-13 10:57:09] Port :8787 busy; waiting...
+[2025-08-13 10:57:10] Port :8787 busy; waiting...
+[2025-08-13 10:57:11] Port :8787 busy; waiting...
+[2025-08-13 10:57:12] Port :8787 busy; waiting...
+[2025-08-13 10:57:13] Port :8787 busy; waiting...
+[2025-08-13 10:57:14] Port :8787 busy; waiting...
+[2025-08-13 10:57:15] Port :8787 busy; waiting...
+[2025-08-13 10:57:17] Port :8787 busy; waiting...
+[2025-08-13 10:57:18] Port :8787 busy; waiting...
+[2025-08-13 10:57:19] Port still busy. Trying anyway.
+[2025-08-13 10:57:19] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:57:19] App exited with code 0
+[2025-08-13 10:57:49] Port :8787 busy; waiting...
+[2025-08-13 10:57:50] Port :8787 busy; waiting...
+[2025-08-13 10:57:51] Port :8787 busy; waiting...
+[2025-08-13 10:57:52] Port :8787 busy; waiting...
+[2025-08-13 10:57:53] Port :8787 busy; waiting...
+[2025-08-13 10:57:55] Port :8787 busy; waiting...
+[2025-08-13 10:57:56] Port :8787 busy; waiting...
+[2025-08-13 10:57:57] Port :8787 busy; waiting...
+[2025-08-13 10:57:58] Port :8787 busy; waiting...
+[2025-08-13 10:57:59] Port :8787 busy; waiting...
+[2025-08-13 10:58:00] Port still busy. Trying anyway.
+[2025-08-13 10:58:00] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:58:00] App exited with code 0
+[2025-08-13 10:58:30] Port :8787 busy; waiting...
+[2025-08-13 10:58:32] Port :8787 busy; waiting...
+[2025-08-13 10:58:33] Port :8787 busy; waiting...
+[2025-08-13 10:58:34] Port :8787 busy; waiting...
+[2025-08-13 10:58:35] Port :8787 busy; waiting...
+[2025-08-13 10:58:36] Port :8787 busy; waiting...
+[2025-08-13 10:58:37] Port :8787 busy; waiting...
+[2025-08-13 10:58:38] Port :8787 busy; waiting...
+[2025-08-13 10:58:39] Port :8787 busy; waiting...
+[2025-08-13 10:58:40] Port :8787 busy; waiting...
+[2025-08-13 10:58:41] Port still busy. Trying anyway.
+[2025-08-13 10:58:41] Starting app: /mnt/md3/spirit/audiovenv/bin/python serve.py
+[serve] instance already running (pid 2776894); exiting.
+[2025-08-13 10:58:42] App exited with code 0
+[2025-08-13 10:59:12] Port :8787 busy; waiting...

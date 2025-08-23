@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Buddy Admin</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f172a;--card:#ffffff;--muted:#64748b;--accent:#2563eb;--accent2:#16a34a;--danger:#dc2626;
+    --line:#e5e7eb;--ink:#0b1220;--ink2:#111827;--chip:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f8fafc;font-family:Inter,system-ui,Segoe UI,Arial;color:var(--ink)}
+  header{background:var(--bg);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:2}
+  header h1{font-size:20px;margin:0 12px 0 0}
+  nav a{color:#cbd5e1;text-decoration:none;margin-right:8px;padding:8px 12px;border-radius:10px}
+  nav a.active{background:#1e293b;color:#fff}
+  main{padding:22px}
+  .toast{min-height:20px;color:var(--accent2);margin:0 0 12px 4px;font-weight:600}
+  .card{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 4px 16px rgba(2,6,23,.06);margin-bottom:22px}
+  .card h2{margin:0 0 12px 0}
+  .group{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:#fff}
+  .group h3{margin:0 0 10px 0;font-size:15px;color:var(--ink2)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row + .row{margin-top:10px}
+  input,select,button,textarea{font:inherit}
+  input,select,textarea{padding:10px;border:1px solid var(--line);border-radius:10px;min-width:140px;background:#fff}
+  textarea{width:100%;min-height:88px}
+  button{padding:10px 14px;border:0;border-radius:10px;color:#fff;background:var(--accent);cursor:pointer}
+  button.secondary{background:#475569}
+  button.success{background:var(--accent2)}
+  button.danger{background:var(--danger)}
+  button.ghost{background:#0f172a0f;color:#0f172a}
+  table{width:100%;border-collapse:collapse;background:#fff}
+  th,td{padding:10px;border-top:1px solid #eef2f7;text-align:left;font-size:14px;vertical-align:top}
+  th:first-child,td:first-child{width:28px}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px}
+  details summary{cursor:pointer}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:var(--chip);color:#0f172a}
+  .section-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .narrow{min-width:90px}
+  .wide{min-width:260px}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace}
+  .spacer{flex:1}
+  @media (max-width:720px){
+    header h1{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Buddy Admin</h1>
+  <nav>
+    <a href="#users" id="tab-users">Users</a>
+    <a href="#projects" id="tab-projects">Projects</a>
+    <a href="#pricing" id="tab-pricing">Pricing</a>
+    <a href="#providers" id="tab-providers">Providers</a>
+    <a href="#routes" id="tab-routes">Routes</a>
+    <a href="#usage" id="tab-usage">Usage</a>
+    <a href="#ledger" id="tab-ledger">Ledger</a>
+    <a href="#maintenance" id="tab-maintenance">Maintenance</a>
+  </nav>
+</header>
+
+<main>
+  <div id="toast" class="toast"></div>
+
+  <!-- USERS -->
+  <section id="view-users" class="card">
+    <h2>Users</h2>
+
+    <div class="group">
+      <h3>Create / Update / Manage</h3>
+      <div class="row">
+        <input id="u-email" class="wide" placeholder="email">
+        <input id="u-first" placeholder="first name">
+        <input id="u-last" placeholder="last name">
+        <input id="u-project-create" class="narrow" placeholder="project_id (optional)">
+        <button onclick="createUser()">Create</button>
+        <span class="spacer"></span>
+        <input id="u-id-key" class="narrow" placeholder="user_id">
+        <button onclick="makeUserKey()">Make key</button>
+        <span class="spacer"></span>
+        <input id="u-id-credit" class="narrow" placeholder="user_id">
+        <input id="u-credits" class="narrow" placeholder="credits">
+        <button onclick="setCredits()">Set credits</button>
+        <span class="spacer"></span>
+        <input id="u-id-assign" class="narrow" placeholder="user_id">
+        <input id="u-proj-assign" class="narrow" placeholder="project_id (or empty)">
+        <button onclick="assignProject()">Assign project</button>
+        <span class="spacer"></span>
+        <button class="danger" onclick="bulkDelete('users')">Delete selected</button>
+        <button class="secondary" onclick="reloadAll()">Reload</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Filter / Sort</h3>
+      <div class="row">
+        <input id="u-filter-project" class="narrow" placeholder="filter: project_id">
+        <input id="u-search" class="wide" placeholder="search: email / name">
+        <select id="u-sort">
+          <option value="id">sort: id</option>
+          <option value="email">sort: email</option>
+          <option value="credits">sort: credits</option>
+          <option value="project_id">sort: project_id</option>
+        </select>
+        <select id="u-order">
+          <option value="asc">asc</option>
+          <option value="desc">desc</option>
+        </select>
+        <button onclick="applyUserFilter()">Apply</button>
+        <button class="secondary" onclick="clearUserFilter()">Clear</button>
+      </div>
+      <div class="hint">Tip: Click a row to load its values into the inputs.</div>
+    </div>
+
+    <table id="tbl-users"><thead><tr>
+      <th><input type="checkbox" onclick="toggleAll(this,'users')"></th>
+      <th>id</th><th>email</th><th>first_name</th><th>last_name</th>
+      <th>credits (effective)</th><th>project_id</th><th>is_active</th>
+      <th>last_settlement_at</th><th>next_settlement_at</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- PROJECTS -->
+  <section id="view-projects" class="card" style="display:none">
+    <h2>Projects</h2>
+
+    <div class="group">
+      <h3>Upsert project</h3>
+      <div class="row">
+        <input id="p-name" class="wide" placeholder="name">
+        <input id="p-credits" class="narrow" placeholder="credits">
+        <select id="p-split">
+          <option value="EQUAL">EQUAL</option>
+          <option value="MANUAL">MANUAL</option>
+          <option value="NONE">NONE</option>
+        </select>
+        <label class="row" style="gap:6px"><input type="checkbox" id="p-common"> CommonPool</label>
+        <select id="p-interval">
+          <option value="">interval (optional)</option>
+          <option value="DAILY">DAILY</option>
+          <option value="WEEKLY">WEEKLY</option>
+          <option value="MONTHLY">MONTHLY</option>
+        </select>
+        <input id="p-allow" class="narrow" placeholder="allowance per user">
+        <button onclick="upsertProject()">Upsert</button>
+        <button class="secondary" onclick="resetProjectFields()">Reset fields</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Shares</h3>
+      <div class="row">
+        <input id="ps-project" class="narrow" placeholder="project_id">
+        <input id="ps-user" class="narrow" placeholder="user_id">
+        <input id="ps-ratio" class="narrow" placeholder="ratio 0..1 (MANUAL)">
+        <button onclick="setShare()">Set share</button>
+        <span class="spacer"></span>
+        <input id="pd-id" class="narrow" placeholder="project_id">
+        <button class="danger" onclick="deleteProject()">Delete</button>
+        <button class="secondary" onclick="reloadAll()">Reload</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Project setup wizard</h3>
+      <div class="row">
+        <input id="wiz-name" class="wide" placeholder="project name (e.g. school1)">
+        <input id="wiz-credits" class="narrow" placeholder="total credits (e.g. 10000)">
+        <input id="wiz-users" class="narrow" placeholder="users (e.g. 20)">
+      </div>
+      <div class="row">
+        <input id="wiz-prefix" class="narrow" placeholder="user (prefix)">
+        <label class="row" style="gap:6px"><input id="wiz-random" type="checkbox"> random usernames</label>
+        
+      </div>
+      <div class="row">
+        <label class="row" style="gap:6px"><input id="wiz-common" type="checkbox" checked> CommonPool</label>
+        <select id="wiz-interval">
+          <option value="DAILY">DAILY</option>
+          <option value="WEEKLY">WEEKLY</option>
+          <option value="MONTHLY">MONTHLY</option>
+        </select>
+        <input id="wiz-allow" class="narrow" placeholder="allowance per user (e.g. 2)">
+        <label class="row" style="gap:6px"><input id="wiz-keys" type="checkbox" checked> generate API keys</label>
+        <button class="success" onclick="createProjectAndUsers()">Create project &amp; users</button>
+      </div>
+      <div class="row">
+        <input id="csv-proj" class="narrow" placeholder="project_id for CSV export">
+        <select id="csv-rotate">
+          <option value="true">rotate keys (export plain)</option>
+          <option value="false">keep existing keys (masked)</option>
+        </select>
+        <button class="secondary" onclick="exportProjectCSV()">Export CSV (user_id,email,api_key)</button>
+        <span class="spacer"></span>
+        <input id="settle-proj" class="narrow" placeholder="project_id">
+        <button class="secondary" onclick="settleNow()">Settle period now</button>
+      </div>
+      <div class="hint">
+        • The wizard creates N users (optional random names UI only), assigns equal shares, optionally enables CommonPool with allowance, and generates keys.<br/>
+        • Unused allowance rolls into the project’s <b>CommonPool</b> at the next period. “Settle period now” performs this sweep + next grant immediately.<br/>
+        • Export gives you a CSV with API keys (rotated if selected).
+      </div>
+    </div>
+
+    <table id="tbl-projects"><thead><tr>
+      <th><input type="checkbox" onclick="toggleAll(this,'projects')"></th>
+      <th>id</th><th>name</th><th>credits</th><th>split_strategy</th>
+      <th>has_common_pool</th><th>allowance_interval</th><th>allowance_per_user</th>
+      <th>users</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- PRICING -->
+  <section id="view-pricing" class="card" style="display:none">
+    <h2>Pricing</h2>
+    <div class="group">
+      <div class="row">
+        <input id="pr-model" class="wide" placeholder="model e.g. gpt-4o-mini">
+        <input id="pr-provider" placeholder="provider e.g. openai_compat">
+        <select id="pr-type">
+          <option>LLM</option><option>VLM</option><option>TTS</option><option>ASR</option><option>OTHER</option>
+        </select>
+        <input id="pr-pin" class="narrow" placeholder="price/input_token">
+        <input id="pr-pout" class="narrow" placeholder="price/output_token">
+        <input id="pr-pchar" class="narrow" placeholder="price/character">
+        <input id="pr-psec" class="narrow" placeholder="price/second">
+        <button onclick="upsertPricing()">Upsert</button>
+        <button class="danger" onclick="bulkDelete('pricing')">Delete selected</button>
+        <button class="secondary" onclick="reloadAll()">Reload</button>
+      </div>
+      <details><summary>How Pricing works (examples)</summary>
+        <div class="hint">
+          • For <b>LLM/VLM</b>, set <b>price/input_token</b> and <b>price/output_token</b>.<br/>
+          • For <b>TTS</b>, set <b>price/character</b>. For <b>ASR</b>, set <b>price/second</b>.<br/>
+          • Example (OpenAI-compat gpt-4o-mini): p_input=0.000001, p_output=0.000002<br/>
+          • Example (TTS tts-1): p_char=0.00002 · Example (ASR whisper-1): p_sec=0.0003
+        </div>
+      </details>
+    </div>
+    <table id="tbl-pricing"><thead><tr>
+      <th><input type="checkbox" onclick="toggleAll(this,'pricing')"></th>
+      <th>id</th><th>model</th><th>provider</th><th>model_type</th>
+      <th>p_input</th><th>p_output</th><th>p_char</th><th>p_sec</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- PROVIDERS -->
+  <section id="view-providers" class="card" style="display:none">
+    <h2>Providers</h2>
+    <div class="group">
+      <div class="row">
+        <input id="pv-name" class="wide" placeholder="name e.g. openai_compat | groq | gemini | tts_openai | asr_openai">
+        <input id="pv-base" class="wide" placeholder="base_url (optional)">
+        <input id="pv-key" class="wide" placeholder="api_key (optional)">
+        <button onclick="upsertProvider()">Upsert</button>
+        <button class="danger" onclick="bulkDelete('providers')">Delete selected</button>
+        <button class="secondary" onclick="resetProviders()">Reset to defaults</button>
+        <button class="secondary" onclick="reloadAll()">Reload</button>
+      </div>
+      <div class="hint">Row-click loads a provider into inputs. To clear an API key, leave key input blank and press “Upsert”, or use the per-row key button.</div>
+    </div>
+    <table id="tbl-providers"><thead><tr>
+      <th><input type="checkbox" onclick="toggleAll(this,'providers')"></th>
+      <th>id</th><th>name</th><th>base_url</th><th>api_key</th><th>actions</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- ROUTES -->
+  <section id="view-routes" class="card" style="display:none">
+    <h2>Routes (priority &amp; failover)</h2>
+    <div class="group">
+      <div class="row">
+        <select id="rt-kind">
+          <option>LLM</option><option>VLM</option><option>TTS</option><option>ASR</option><option>OTHER</option>
+        </select>
+        <input id="rt-provider" class="wide" placeholder="provider name (must match Providers)">
+        <input id="rt-model" class="wide" placeholder="model on that provider">
+        <input id="rt-prio" class="narrow" placeholder="priority (1=highest)">
+        <select id="rt-enabled"><option value="true">enabled</option><option value="false">disabled</option></select>
+        <button onclick="upsertRoute()">Upsert</button>
+        <button class="danger" onclick="bulkDelete('routes')">Delete selected</button>
+        <button class="secondary" onclick="resetRoutes()">Reset defaults</button>
+        <button class="secondary" onclick="reloadAll()">Reload</button>
+      </div>
+      <details><summary>How routing works</summary>
+        <div class="hint">
+          • For each kind (LLM/VLM/TTS/ASR) the middleware tries providers in ascending priority (1,2,3…).<br/>
+          • If a provider errors (e.g. 429/5xx), it fails over to the next one.<br/>
+          • Leave the front-end model as <b>auto</b> to just use this priority chain.
+        </div>
+      </details>
+    </div>
+    <table id="tbl-routes"><thead><tr>
+      <th><input type="checkbox" onclick="toggleAll(this,'routes')"></th>
+      <th>id</th><th>kind</th><th>provider</th><th>model</th><th>priority</th><th>enabled</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- USAGE -->
+  <section id="view-usage" class="card" style="display:none">
+    <h2>Usage</h2>
+    <table id="tbl-usage"><thead><tr>
+      <th>id</th><th>user_id</th><th>provider</th><th>model</th><th>type</th>
+      <th>input</th><th>output</th><th>billed</th><th>created_at</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- LEDGER -->
+  <section id="view-ledger" class="card" style="display:none">
+    <h2>Ledger</h2>
+    <table id="tbl-ledger"><thead><tr>
+      <th>id</th><th>user_id</th><th>delta</th><th>reason</th><th>created_at</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- MAINTENANCE -->
+  <section id="view-maintenance" class="card" style="display:none">
+    <h2>Maintenance</h2>
+
+    <div class="group">
+      <h3>Export</h3>
+      <div class="row">
+        <button onclick="downloadSqlite()">Download SQLite snapshot</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Restore SQLite (.db)</h3>
+      <div class="row">
+        <input id="db-file" type="file" accept=".db,application/octet-stream"/>
+        <button onclick="uploadSqlite()">Upload &amp; Replace</button>
+      </div>
+      <div class="hint">This will replace the current database with the uploaded SQLite file.</div>
+    </div>
+
+    <div class="group">
+      <h3>Reset database</h3>
+      <div class="row">
+        <button class="danger" onclick="resetAll()">Reset ALL (danger)</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ---------- Helpers ---------- */
+const api = (p, init={}) => fetch(p, init).then(async r => {
+  if (!r.ok) {
+    let t; try { t = await r.text() } catch {}
+    throw new Error(t || (r.status+" "+r.statusText));
+  }
+  const ct = r.headers.get("content-type") || "";
+  if (ct.includes("application/json")) return r.json();
+  return r.text();
+});
+const toast = (msg) => document.getElementById("toast").textContent = msg || "";
+const q = sel => document.querySelector(sel);
+
+function activateTab() {
+  const hash = location.hash || "#users";
+  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("active", a.getAttribute("href")===hash));
+  document.querySelectorAll("main > section").forEach(s => s.style.display="none");
+  const el = document.getElementById("view-"+hash.substring(1));
+  if (el) el.style.display = "block";
+}
+window.addEventListener("hashchange", activateTab);
+activateTab();
+
+function toggleAll(cb, table) {
+  document.querySelectorAll(`#tbl-${table} tbody input[type=checkbox]`).forEach(x => x.checked = cb.checked);
+}
+function getSelectedIds(table) {
+  const ids = [];
+  document.querySelectorAll(`#tbl-${table} tbody input[type=checkbox]:checked`).forEach(x => ids.push(x.dataset.id));
+  return ids.join(",");
+}
+function toCSVdownload(text, filename){
+  const blob = new Blob([text], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- USERS ---------- */
+async function loadUsers(params={}) {
+  const search = new URLSearchParams(params).toString();
+  const res = await api(`/admin/users${search?("?" + search):""}`);
+  const tb = document.querySelector("#tbl-users tbody"); tb.innerHTML="";
+  res.forEach(r=>{
+    const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><input type="checkbox" data-id="${r.id ?? r.display_id}"></td>
+    <td>${r.display_id || r.id}</td>
+    <td>${r.email||""}</td>
+    <td>${r.first_name||""}</td>
+    <td>${r.last_name||""}</td>
+    <td class="mono">${r.credits}</td>
+    <td>${r.project_id??""}</td>
+    <td>${r.is_active}</td>
+    <td>${r.last_settlement_at||""}</td>
+    <td>${r.next_settlement_at||""}</td>`;
+
+
+    tr.addEventListener("click", e=>{
+      if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
+      q("#u-id-key").value = r.id;
+      q("#u-id-credit").value = r.id;
+      q("#u-id-assign").value = r.id;
+      q("#u-email").value = r.email||"";
+      q("#u-first").value = r.first_name||"";
+      q("#u-last").value = r.last_name||"";
+      q("#u-project-create").value = r.project_id??"";
+    });
+    tb.appendChild(tr);
+  });
+}
+async function applyUserFilter(){
+  const params = {};
+  const pid = q("#u-filter-project").value.trim();
+  const s = q("#u-search").value.trim();
+  const sort = q("#u-sort").value;
+  const order = q("#u-order").value;
+  if (pid) params.project_id = pid;
+  if (s) params.q = s;
+  params.sort = sort; params.order = order;
+  await loadUsers(params);
+}
+function clearUserFilter(){
+  q("#u-filter-project").value=""; q("#u-search").value="";
+  q("#u-sort").value="id"; q("#u-order").value="asc";
+  loadUsers({sort:"id", order:"asc"});
+}
+async function createUser(){
+  const fd=new FormData();
+  fd.append("email", q("#u-email").value);
+  fd.append("first_name", q("#u-first").value);
+  fd.append("last_name", q("#u-last").value);
+  const pid = q("#u-project-create").value.trim();
+  if (pid) fd.append("project_id", pid);
+  const r = await api("/admin/users", {method:"POST", body:fd});
+  toast("User created id="+(r.id||""));
+  applyUserFilter();
+}
+async function setCredits(){
+  const id = q("#u-id-credit").value;
+  const fd=new FormData(); fd.append("credits", q("#u-credits").value);
+  const r = await api(`/admin/users/${id}/credits`, {method:"POST", body:fd});
+  toast("Credits set."); applyUserFilter();
+}
+async function makeUserKey(){
+  const id = q("#u-id-key").value;
+  const r = await api(`/admin/users/${id}/apikey`, {method:"POST"});
+  toast("API key: "+(r.api_key||""));
+}
+async function assignProject(){
+  const id = q("#u-id-assign").value;
+  const fd=new FormData(); fd.append("project_id", q("#u-proj-assign").value);
+  await api(`/admin/users/${id}/project`, {method:"POST", body:fd});
+  toast("Project updated."); applyUserFilter();
+}
+async function bulkDelete(kind){
+  let url="", ids="";
+  if (kind==="users"){ ids=getSelectedIds("users"); url="/admin/users/delete"; }
+  if (kind==="providers"){ ids=getSelectedIds("providers"); url="/admin/providers/delete"; }
+  if (kind==="pricing"){ ids=getSelectedIds("pricing"); url="/admin/pricing/delete"; }
+  if (kind==="routes"){ ids=getSelectedIds("routes"); url="/admin/routes/delete"; }
+  if (!ids){ toast("No rows selected."); return; }
+  const fd = new FormData(); fd.append("ids", ids);
+  const r = await api(url, {method:"POST", body:fd});
+  toast(`Deleted: ${r.deleted||0}`); reloadAll();
+}
+
+/* ---------- PROJECTS ---------- */
+async function loadProjects(){
+  const res = await api("/admin/projects");
+  const tb = q("#tbl-projects tbody"); tb.innerHTML = "";
+
+  res.forEach(r => {
+    // tolerate either the new API names or legacy attribute names
+    const last =
+      r.last_settlement_at || r.last_settled_at || r.last_settlementAt || r.last_settled || "";
+    const next =
+      r.next_settlement_at || r.next_settle_at || r.next_settlementAt || r.next_settle || "";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${r.id}"></td>
+      <td>${r.id}</td>
+      <td>${r.name}</td>
+      <td class="mono">${r.credits}</td>
+      <td>${r.split_strategy}</td>
+      <td>${r.has_common_pool}</td>
+      <td>${r.allowance_interval || ""}</td>
+      <td class="mono">${r.allowance_per_user}</td>
+      <td>${(r.users || []).join(",")}</td>
+      <td class="mono">${last || ""}</td>
+      <td class="mono">${next || ""}</td>
+    `;
+
+    // Clicking a row loads values into the inputs (unchanged behavior)
+    tr.addEventListener("click", e => {
+      if (e.target.tagName === "INPUT") return; // ignore checkbox clicks
+      q("#p-name").value = r.name;
+      q("#p-credits").value = r.credits;
+      q("#p-split").value = r.split_strategy;
+      q("#p-common").checked = !!r.has_common_pool;
+      q("#p-interval").value = r.allowance_interval || "";
+      q("#p-allow").value = r.allowance_per_user;
+      q("#pd-id").value = r.id;
+      q("#csv-proj").value = r.id;
+      q("#settle-proj").value = r.id;
+      q("#ps-project").value = r.id;
+    });
+
+    tb.appendChild(tr);
+  });
+}
+
+
+
+
+async function upsertProject(){
+  const fd=new FormData();
+  fd.append("name", q("#p-name").value);
+  fd.append("credits", q("#p-credits").value||"0");
+  fd.append("split_strategy", q("#p-split").value);
+  fd.append("has_common_pool", q("#p-common").checked ? "true":"false");
+  if (q("#p-interval").value) fd.append("allowance_interval", q("#p-interval").value);
+  fd.append("allowance_per_user", q("#p-allow").value||"0");
+  const r = await api("/admin/projects",{method:"POST", body:fd});
+  toast("Project upserted id="+(r.id||"")); loadProjects();
+}
+function resetProjectFields(){
+  ["#p-name","#p-credits","#p-allow"].forEach(id=> q(id).value="");
+  q("#p-split").value="EQUAL"; q("#p-common").checked=false; q("#p-interval").value="";
+}
+async function setShare(){
+  const fd=new FormData();
+  fd.append("user_id", q("#ps-user").value);
+  fd.append("ratio", q("#ps-ratio").value);
+  const r = await api(`/admin/projects/${q("#ps-project").value}/shares`,{method:"POST", body:fd});
+  toast("Share updated.");
+}
+async function deleteProject(){
+  const id = q("#pd-id").value;
+  const r = await api(`/admin/projects/${id}/delete`, {method:"POST"});
+  toast("Project deleted."); loadProjects(); applyUserFilter();
+}
+async function createProjectAndUsers(){
+  const fd=new FormData();
+  fd.append("name", q("#wiz-name").value);
+  fd.append("total_credits", q("#wiz-credits").value||"0");
+  fd.append("users_count", q("#wiz-users").value||"0");
+  fd.append("prefix", q("#wiz-prefix").value||"user");
+  fd.append("rotate_or_create_keys", q("#wiz-keys").checked ? "true":"false");
+  fd.append("has_common_pool", q("#wiz-common").checked ? "true":"false");
+  fd.append("allowance_interval", q("#wiz-interval").value);
+  if (q("#wiz-allow").value) fd.append("allowance_per_user", q("#wiz-allow").value);
+  const r = await api("/admin/projects/init", {method:"POST", body:fd});
+  toast("Created project "+(r.project_id||"")+" & "+(r.users?.length||0)+" users.");
+  loadProjects(); applyUserFilter();
+}
+async function exportProjectCSV(){
+  const pid = q("#csv-proj").value.trim();
+  if (!pid){ toast("Enter project_id"); return;}
+  const rotate = q("#csv-rotate").value;
+  const res = await fetch(`/admin/projects/${pid}/export_keys?rotate=${rotate}`);
+  if (!res.ok){ toast("Export failed"); return; }
+  const text = await res.text();
+  toCSVdownload(text, `project_${pid}_keys.csv`);
+  toast("CSV downloaded.");
+}
+async function settleNow(){
+  const pid = q("#settle-proj").value.trim();
+  if (!pid){ toast("Enter project_id"); return; }
+  const grant = q("#wiz-allow").value.trim();
+  const fd = new FormData();
+  if (grant) fd.append("grant_per_user", grant);
+
+  let resp=null, ok=false, msg="";
+  try{
+    resp = await api(`/admin/projects/${pid}/settle`, {method:"POST", body:fd});
+    ok = true;
+  }catch(e){
+    try{
+      resp = await api(`/admin/projects/${pid}/settle_now`, {method:"POST", body:fd});
+      ok = true;
+    }catch(e2){
+      msg = e2.message || "Settle failed";
+    }
+  }
+
+  if (ok){
+    const r = resp || {};
+    if (r.partial){
+      const warn = r.warning || "Partial settlement executed.";
+      toast(`${warn} Granted/user=${r.granted_per_user}, requested/user=${r.requested_per_user}, shortfall=${r.shortfall}.`);
+    }else{
+      toast(`Settled OK. Granted/user=${r.granted_per_user}; users=${r.users}; swept=${r.swept}.`);
+    }
+  }else{
+    toast("Settle failed: "+msg);
+  }
+
+  loadProjects(); applyUserFilter();
+}
+
+/* ---------- PRICING ---------- */
+async function loadPricing(){
+  const res = await api("/admin/pricing");
+  const tb = q("#tbl-pricing tbody"); tb.innerHTML="";
+  res.forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${r.id}"></td>
+      <td>${r.id}</td><td>${r.model}</td><td>${r.provider}</td><td>${r.model_type||""}</td>
+      <td class="mono">${r.p_input}</td><td class="mono">${r.p_output}</td>
+      <td class="mono">${r.p_char}</td><td class="mono">${r.p_sec}</td>`;
+    tr.addEventListener("click", e=>{
+      if (e.target.tagName === "INPUT") return;
+      q("#pr-model").value = r.model; q("#pr-provider").value = r.provider;
+      q("#pr-type").value = r.model_type||"LLM"; q("#pr-pin").value = r.p_input;
+      q("#pr-pout").value = r.p_output; q("#pr-pchar").value = r.p_char; q("#pr-psec").value = r.p_sec;
+    });
+    tb.appendChild(tr);
+  });
+}
+async function upsertPricing(){
+  const fd=new FormData();
+  ["model","provider"].forEach(k=>fd.append(k, q("#pr-"+k).value));
+  fd.append("model_type", q("#pr-type").value);
+  fd.append("price_per_input_token", q("#pr-pin").value||"0");
+  fd.append("price_per_output_token", q("#pr-pout").value||"0");
+  fd.append("price_per_character", q("#pr-pchar").value||"0");
+  fd.append("price_per_second", q("#pr-psec").value||"0");
+  const r = await api("/admin/pricing",{method:"POST", body:fd});
+  toast("Pricing upserted."); loadPricing();
+}
+
+/* ---------- PROVIDERS ---------- */
+async function loadProviders(){
+  const res = await api("/admin/providers");
+  const tb = q("#tbl-providers tbody"); tb.innerHTML="";
+  res.forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${r.id}"></td>
+      <td>${r.id}</td><td>${r.name}</td><td class="mono">${r.base_url||""}</td>
+      <td>${r.api_key?'<span class="pill">set</span>':'<span class="pill">false</span>'}</td>
+      <td><button class="ghost" onclick="promptSetKey(${r.id});event.stopPropagation()">Set key</button></td>`;
+    tr.addEventListener("click", e=>{
+      if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
+      q("#pv-name").value = r.name; q("#pv-base").value = r.base_url||""; q("#pv-key").value="";
+    });
+    tb.appendChild(tr);
+  });
+}
+async function promptSetKey(id){
+  const key = prompt("Enter API key (leave empty to clear):","");
+  if (key===null) return;
+  const fd=new FormData(); fd.append("api_key", key);
+  const r = await api(`/admin/providers/${id}/apikey`, {method:"POST", body:fd});
+  toast("Key updated."); loadProviders();
+}
+async function upsertProvider(){
+  const fd=new FormData();
+  fd.append("name", q("#pv-name").value);
+  if (q("#pv-base").value) fd.append("base_url", q("#pv-base").value);
+  fd.append("api_key", q("#pv-key").value); // empty string clears
+  const r = await api("/admin/providers",{method:"POST", body:fd});
+  toast("Provider upserted."); loadProviders();
+}
+async function resetProviders(){
+  const r = await api("/admin/providers/reset",{method:"POST"});
+  toast("Providers reset. created "+(r.created||0)); loadProviders();
+}
+
+/* ---------- ROUTES ---------- */
+async function loadRoutes(){
+  const res = await api("/admin/routes");
+  const tb = q("#tbl-routes tbody"); tb.innerHTML="";
+  res.forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${r.id}"></td>
+      <td>${r.id}</td><td>${r.kind}</td><td>${r.provider}</td>
+      <td>${r.model}</td><td>${r.priority}</td><td>${r.enabled}</td>`;
+    tr.addEventListener("click", e=>{
+      if (e.target.tagName === "INPUT") return;
+      q("#rt-kind").value=r.kind; q("#rt-provider").value=r.provider;
+      q("#rt-model").value=r.model; q("#rt-prio").value=r.priority;
+      q("#rt-enabled").value = r.enabled ? "true":"false";
+    });
+    tb.appendChild(tr);
+  });
+}
+async function upsertRoute(){
+  const fd=new FormData();
+  fd.append("kind", q("#rt-kind").value);
+  fd.append("provider", q("#rt-provider").value);
+  fd.append("model", q("#rt-model").value);
+  fd.append("priority", q("#rt-prio").value||"1");
+  fd.append("enabled", q("#rt-enabled").value);
+  const r = await api("/admin/routes",{method:"POST", body:fd});
+  toast("Route upserted."); loadRoutes();
+}
+async function resetRoutes(){
+  const r = await api("/admin/routes/reset",{method:"POST"});
+  toast("Routes reset. created "+(r.created||0)); loadRoutes();
+}
+
+/* ---------- USAGE / LEDGER ---------- */
+async function loadUsage(){
+  const res = await api("/admin/usage");
+  const tb = q("#tbl-usage tbody"); tb.innerHTML="";
+  res.forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML = `<td>${r.id}</td><td>${r.user_id}</td><td>${r.provider}</td>
+      <td>${r.model}</td><td>${r.model_type||""}</td><td>${r.input}</td>
+      <td>${r.output}</td><td class="mono">${r.billed}</td><td>${r.created_at||""}</td>`;
+    tb.appendChild(tr);
+  });
+}
+async function loadLedger(){
+  try{
+    const res = await api("/admin/ledger");
+    const tb = q("#tbl-ledger tbody"); tb.innerHTML="";
+    res.forEach(r=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML = `<td>${r.id}</td><td>${r.user_id}</td><td class="mono">${r.delta}</td>
+        <td>${r.reason||""}</td><td>${r.created_at||""}</td>`;
+      tb.appendChild(tr);
+    });
+  }catch(e){
+    // optional
+  }
+}
+
+/* ---------- MAINTENANCE ---------- */
+function downloadSqlite(){
+  window.location.href = "/admin/export/sqlite";
+}
+async function uploadSqlite(){
+  const f = q("#db-file").files?.[0];
+  if (!f){ toast("Choose a .db file first"); return; }
+  const fd = new FormData(); fd.append("file", f);
+  const r = await api("/admin/import/sqlite", {method:"POST", body:fd});
+  toast("Restore OK. Reloading data…");
+  reloadAll();
+}
+async function resetAll(){
+  if (!confirm("Really reset ALL data?")) return;
+  const r = await api("/admin/reset_all", {method:"POST"});
+  toast(JSON.stringify(r)); reloadAll();
+}
+
+/* ---------- boot ---------- */
+async function reloadAll(){
+  toast("Loaded.");
+  await Promise.all([
+    applyUserFilter(),
+    loadProjects(),
+    loadPricing(),
+    loadProviders(),
+    loadRoutes(),
+    loadUsage(),
+    loadLedger(),
+  ]).catch(e=> toast("Load error: "+e.message));
+}
+reloadAll();
+</script>
+</body>
+</html>
