@@ -437,6 +437,31 @@ async def chat_completions(
         # fallback to LLM if no VLM route configured
         routes = await _ordered_routes(session, RouteKind.LLM)
 
+
+    # --- PDF detection + Gemini-only narrowing (NEW) ---
+    def _has_pdf(msgs: list[dict]) -> bool:
+        try:
+            for m in msgs:
+                c = m.get("content")
+                if isinstance(c, list):
+                    for p in c:
+                        if isinstance(p, dict) and p.get("type") == "pdf":
+                            return True
+        except Exception:
+            pass
+        return False
+
+    has_pdf = _has_pdf(messages)
+    if has_pdf:
+        # Only Gemini providers for PDFs
+        routes = [r for r in routes if r.provider.lower() == "gemini"]
+        if not routes:
+            raise HTTPException(
+                400,
+                "PDF input requires a Gemini VLM route. Configure provider 'gemini' (Google API key) in Admin ? Routes."
+            )
+
+
     # Token-Schaetzung für Input (nur User-Text)
     user_texts: List[str] = []
     for m in messages:
@@ -468,7 +493,150 @@ async def chat_completions(
 
     provs = await _provider_map(session)
 
+    # --- OpenAI?Gemini adapters (NEW) -------------------------------------------
+    def _data_url_to_inline_data(url: str) -> dict | None:
+        # expects data:...;base64,XXXX
+        if not (isinstance(url, str) and url.startswith("data:") and ";base64," in url):
+            return None
+        head, b64 = url.split(",", 1)
+        mime = head[5:head.find(";")] or "application/octet-stream"
+        return {"inlineData": {"mimeType": mime, "data": b64}}
+
+    def _openai_to_gemini(msgs: list[dict]) -> tuple[list, dict | None]:
+        """
+        Convert OpenAI chat 'messages' into Gemini {contents, systemInstruction}.
+        - text parts -> {text: "..."}
+        - image_url (data URL) -> {inlineData: {mimeType, data}}
+        - pdf parts -> {inlineData: {mimeType: "application/pdf", data}}
+        - roles: user/assistant/system -> user/model/systemInstruction
+        """
+        contents: list = []
+        system_instruction: dict | None = None
+
+        for m in msgs or []:
+            role = m.get("role", "user")
+            gr = "user" if role in ("user", "system") else "model"
+            parts = []
+
+            c = m.get("content")
+            if isinstance(c, str):
+                if c.strip():
+                    parts.append({"text": c})
+            elif isinstance(c, list):
+                for p in c:
+                    if not isinstance(p, dict):
+                        continue
+                    t = p.get("type")
+                    if t == "text":
+                        txt = p.get("text", "")
+                        if txt.strip():
+                            parts.append({"text": txt})
+                    elif t == "image_url":
+                        img = p.get("image_url")
+                        url = img.get("url") if isinstance(img, dict) else (img if isinstance(img, str) else "")
+                        idata = _data_url_to_inline_data(url)
+                        if idata:
+                            parts.append(idata)
+                    elif t == "pdf":
+                        pdata = p.get("data", "")
+                        if pdata:
+                            parts.append({"inlineData": {
+                                "mimeType": p.get("mime_type") or "application/pdf",
+                                "data": pdata
+                            }})
+
+            if role == "system":
+                # **Match frontend**: role + parts structure
+                text = "".join([pp.get("text", "") for pp in parts if isinstance(pp, dict) and "text" in pp]) or ""
+                if text:
+                    system_instruction = {
+                        "role": "system",
+                        "parts": [{"text": text}],
+                    }
+                continue
+
+            if parts:
+                contents.append({"role": gr, "parts": parts})
+
+        return contents, system_instruction
+
+
+    def _collect_texts(obj) -> str:
+        """Recursively collect all 'text' fields from a Gemini response tree."""
+        out = []
+        def walk(o):
+            if isinstance(o, dict):
+                if "text" in o and isinstance(o["text"], str):
+                    out.append(o["text"])
+                for v in o.values():
+                    walk(v)
+            elif isinstance(o, list):
+                for v in o:
+                    walk(v)
+        walk(obj)
+        return "".join(out)
+
+
+
+    def _collect_texts(obj) -> str:
+        """Recursively collect all 'text' fields from a Gemini response tree."""
+        out = []
+        def walk(o):
+            if isinstance(o, dict):
+                if "text" in o and isinstance(o["text"], str):
+                    out.append(o["text"])
+                for v in o.values():
+                    walk(v)
+            elif isinstance(o, list):
+                for v in o:
+                    walk(v)
+        walk(obj)
+        return "".join(out)
     async def do_json_call(provider: str, model: str) -> Tuple[int, Dict[str, Any]]:
+        """
+        JSON (non-stream) call.
+        - For PDFs routed to Gemini: translate OpenAI messages -> Gemini body and POST :generateContent
+        - Otherwise: standard OpenAI-compatible JSON passthrough to /v1/chat/completions
+        """
+        # PDF ? Gemini JSON branch
+        if has_pdf:
+            pe = provs.get(provider)
+            base = (pe.base_url or "").lower() if pe else ""
+            if (provider.lower() == "gemini") or ("generativelanguage.googleapis.com" in base):
+                if not pe or not pe.api_key:
+                    raise HTTPException(503, "Provider 'gemini' incomplete configuration")
+                final_model = (model or routes[0].model or "gemini-2.5-pro")
+
+                contents, system_instruction = _openai_to_gemini(messages)
+                body: Dict[str, Any] = {
+                    "contents": contents,
+                    # **Mirror frontend**:
+                    "generationConfig": {"thinkingConfig": {"thinkingBudget": -1}},
+                    "tools": [{"googleSearch": {}}],
+                }
+                temp = payload.get("temperature")
+                if isinstance(temp, (int, float)):
+                    body.setdefault("generationConfig", {})["temperature"] = temp
+                if system_instruction:
+                    body["systemInstruction"] = system_instruction
+
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{final_model}:generateContent?key={pe.api_key}"
+                _trace(f"[ROUTE][JSON TRY] gemini:{final_model} -> {url}")
+
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    r = await client.post(
+                        url,
+                        headers={"Content-Type": "application/json", "Accept": "application/json"},
+                        json=body
+                    )
+                    status = r.status_code
+                    try:
+                        data = r.json()
+                    except Exception:
+                        data = {"raw": (await r.aread()).decode(errors="ignore")}
+                    return status, data
+
+        # Default OpenAI-compatible JSON passthrough
         pe = provs.get(provider)
         if not pe or not pe.base_url or not pe.api_key:
             raise HTTPException(503, f"Provider '{provider}' incomplete configuration")
@@ -481,6 +649,73 @@ async def chat_completions(
         return await _json_proxy(url, headers, body)
 
     async def do_stream_call(provider: str, model: str) -> AsyncGenerator[bytes, None]:
+        """
+        Streaming (SSE) call.
+        - For PDFs routed to Gemini: translate to Gemini body and POST :streamGenerateContent?alt=sse
+          Then bridge Gemini SSE into OpenAI-style delta events for the client.
+        - Otherwise: standard OpenAI-compatible SSE passthrough.
+        """
+        # PDF ? Gemini SSE branch
+        if has_pdf:
+            pe = provs.get(provider)
+            base = (pe.base_url or "").lower() if pe else ""
+            if (provider.lower() == "gemini") or ("generativelanguage.googleapis.com" in base):
+                if not pe or not pe.api_key:
+                    raise HTTPException(503, "Provider 'gemini' incomplete configuration")
+                final_model = (model or routes[0].model or "gemini-2.5-pro")
+
+                contents, system_instruction = _openai_to_gemini(messages)
+                body: Dict[str, Any] = {
+                    "contents": contents,
+                    # **Mirror frontend**:
+                    "generationConfig": {"thinkingConfig": {"thinkingBudget": -1}},
+                    "tools": [{"googleSearch": {}}],
+                }
+                temp = payload.get("temperature")
+                if isinstance(temp, (int, float)):
+                    body.setdefault("generationConfig", {})["temperature"] = temp
+                if system_instruction:
+                    body["systemInstruction"] = system_instruction
+
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{final_model}:streamGenerateContent?alt=sse&key={pe.api_key}"
+                _trace(f"[ROUTE][SSE TRY] gemini:{final_model} -> {url}")
+
+                async def gen() -> AsyncGenerator[bytes, None]:
+                    # initial assistant-role delta
+                    yield f"data: {json.dumps({'choices':[{'delta':{'role':'assistant'}}]})}\n\n".encode()
+                    async with httpx.AsyncClient(timeout=None) as client:
+                        async with client.stream(
+                            "POST",
+                            url,
+                            headers={
+                                "Content-Type": "application/json",
+                                "Accept": "text/event-stream",
+                            },
+                            json=body
+                        ) as resp:
+                            if resp.status_code >= 400:
+                                blob = await resp.aread()
+                                msg = blob.decode(errors="ignore")[:800]
+                                raise HTTPException(status_code=502, detail=f"Gemini upstream {resp.status_code}: {msg}")
+
+                            async for line in resp.aiter_lines():
+                                if not line or not line.startswith("data: "):
+                                    continue
+                                if line.strip() == "data: [DONE]":
+                                    continue
+                                try:
+                                    j = json.loads(line[6:])
+                                except Exception:
+                                    continue
+                                text = _collect_texts(j)
+                                if text:
+                                    _billing_ctx["out_tokens"] += approx_tokens_from_text(text)
+                                    yield f"data: {json.dumps({'choices':[{'delta':{'content':text}}]})}\n\n".encode()
+                    yield b"data: [DONE]\n\n"
+
+                return gen()
+
+        # Default OpenAI-compatible SSE passthrough
         pe = provs.get(provider)
         if not pe or not pe.base_url or not pe.api_key:
             raise HTTPException(503, f"Provider '{provider}' incomplete configuration")
@@ -491,6 +726,7 @@ async def chat_completions(
         body["stream"] = True
         _trace(f"[ROUTE][SSE TRY] {provider}:{body['model']} -> {url}")
         return _sse_passthrough_and_bill(url, headers, body)
+
 
 
     last_error: Optional[Exception] = None
