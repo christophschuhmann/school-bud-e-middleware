@@ -411,7 +411,6 @@ _billing_ctx: Dict[str, int] = {"out_tokens": 0}
 # -----------------------------------------------------------------------------
 # Chat Completions (LLM/VLM) – SSE streaming with provider failover
 # -----------------------------------------------------------------------------
-
 @app.post("/v1/chat/completions")
 async def chat_completions(
     payload: dict,
@@ -419,26 +418,32 @@ async def chat_completions(
     session: AsyncSession = Depends(get_session),
 ):
     """
-    OpenAI-compatible chat with **priority failover** across providers
-    based on RoutePref (VLM if the message contains images/PDFs, else LLM).
-    If payload.model is present, it is tried first; then RoutePref defaults.
-    Default behaviour: stream passthrough (SSE). If stream=false ? JSON.
+    OpenAI-compatible chat with priority/failover across providers via RoutePref.
+
+    Accurate usage:
+    - OpenAI-compatible:
+        * Non-stream: read response["usage"]
+        * Stream: send stream_options.include_usage = true and parse final SSE 'usage' event
+    - Gemini:
+        * Non-stream: read response["usageMetadata"]
+        * Stream: parse final SSE event with 'usageMetadata'
+        * Optional preflight :countTokens to get per-modality counts (image tokens, etc.)
+
+    Routing behavior is unchanged (PDF -> Gemini adapter; image/text -> OpenAI-compat).
     """
     requested_model = (payload.get("model") or "").strip()
     wants_stream: bool = bool(payload.get("stream", True))
 
-    # VLM wenn in Messages Bild/PDF vorkommt
+    # Messages & kind detection
     messages = payload.get("messages") or []
     is_vlm = _looks_like_vlm(messages)
 
     route_kind = RouteKind.VLM if is_vlm else RouteKind.LLM
     routes = await _ordered_routes(session, route_kind)
     if not routes and route_kind == RouteKind.VLM:
-        # fallback to LLM if no VLM route configured
         routes = await _ordered_routes(session, RouteKind.LLM)
 
-
-    # --- PDF detection + Gemini-only narrowing (NEW) ---
+    # Detect PDFs specifically (forces Gemini provider)
     def _has_pdf(msgs: list[dict]) -> bool:
         try:
             for m in msgs:
@@ -453,90 +458,79 @@ async def chat_completions(
 
     has_pdf = _has_pdf(messages)
     if has_pdf:
-        # Only Gemini providers for PDFs
         routes = [r for r in routes if r.provider.lower() == "gemini"]
         if not routes:
             raise HTTPException(
                 400,
-                "PDF input requires a Gemini VLM route. Configure provider 'gemini' (Google API key) in Admin ? Routes."
+                "PDF input requires a Gemini VLM route. Configure provider 'gemini' with a valid API key in Admin ? Routes."
             )
 
-
-    # Token-Schaetzung für Input (nur User-Text)
-    user_texts: List[str] = []
-    for m in messages:
-        if m.get("role") == "user":
-            c = m.get("content")
-            if isinstance(c, str):
-                user_texts.append(c)
-            elif isinstance(c, list):
-                for p in c:
-                    if p.get("type") == "text":
-                        user_texts.append(p.get("text", ""))
-    est_in = approx_tokens_from_text(" ".join(user_texts))
-
-    # Kandidatenliste: requested_model zuerst (über Provider in Prioritaet), dann Default
+    # Build candidate list: requested_model first, then route defaults
     candidates: List[Tuple[str, str]] = []
     if requested_model:
         for r in routes:
             candidates.append((r.provider, requested_model))
     for r in routes:
         candidates.append((r.provider, r.model))
-
-    # de-duplizieren
-    seen = set()
-    ordered: List[Tuple[str, str]] = []
+    # de-dup in order
+    seen = set(); ordered: List[Tuple[str, str]] = []
     for t in candidates:
         if t not in seen:
-            seen.add(t)
-            ordered.append(t)
+            seen.add(t); ordered.append(t)
 
     provs = await _provider_map(session)
 
-    # --- OpenAI?Gemini adapters (NEW) -------------------------------------------
+    # ------------- token helpers (still used as fallback) ----------------
+    def approx_tokens_from_text(text: str) -> int:
+        return max(1, int(len(text) / 4) + text.count(" "))
+
+    def _extract_assistant_text(obj: Any) -> str:
+        # OpenAI JSON or similar: choices[].message/content
+        try:
+            ch = (obj.get("choices") or [{}])[0]
+            msg = ch.get("message") or {}
+            cnt = msg.get("content")
+            if isinstance(cnt, str): return cnt
+            if isinstance(cnt, list):
+                return "".join([p.get("text","") for p in cnt if isinstance(p, dict) and p.get("type")=="text"])
+        except Exception:
+            pass
+        return ""
+
+    # ---------- Gemini helpers (adapter + usage) ----------
     def _data_url_to_inline_data(url: str) -> dict | None:
-        # expects data:...;base64,XXXX
-        if not (isinstance(url, str) and url.startswith("data:") and ";base64," in url):
+        try:
+            if not isinstance(url, str) or not url.startswith("data:") or ";base64," not in url:
+                return None
+            head, b64 = url.split(",", 1)
+            mime = head[5:head.find(";")] or "application/octet-stream"
+            return {"inlineData": {"mimeType": mime, "data": b64}}
+        except Exception:
             return None
-        head, b64 = url.split(",", 1)
-        mime = head[5:head.find(";")] or "application/octet-stream"
-        return {"inlineData": {"mimeType": mime, "data": b64}}
 
     def _openai_to_gemini(msgs: list[dict]) -> tuple[list, dict | None]:
-        """
-        Convert OpenAI chat 'messages' into Gemini {contents, systemInstruction}.
-        - text parts -> {text: "..."}
-        - image_url (data URL) -> {inlineData: {mimeType, data}}
-        - pdf parts -> {inlineData: {mimeType: "application/pdf", data}}
-        - roles: user/assistant/system -> user/model/systemInstruction
-        """
         contents: list = []
         system_instruction: dict | None = None
-
         for m in msgs or []:
             role = m.get("role", "user")
             gr = "user" if role in ("user", "system") else "model"
             parts = []
-
             c = m.get("content")
             if isinstance(c, str):
                 if c.strip():
                     parts.append({"text": c})
             elif isinstance(c, list):
                 for p in c:
-                    if not isinstance(p, dict):
-                        continue
+                    if not isinstance(p, dict): continue
                     t = p.get("type")
                     if t == "text":
                         txt = p.get("text", "")
-                        if txt.strip():
-                            parts.append({"text": txt})
+                        if txt.strip(): parts.append({"text": txt})
                     elif t == "image_url":
                         img = p.get("image_url")
                         url = img.get("url") if isinstance(img, dict) else (img if isinstance(img, str) else "")
                         idata = _data_url_to_inline_data(url)
-                        if idata:
-                            parts.append(idata)
+                        if idata: parts.append(idata)
                     elif t == "pdf":
                         pdata = p.get("data", "")
                         if pdata:
@@ -544,91 +538,258 @@ async def chat_completions(
                                 "mimeType": p.get("mime_type") or "application/pdf",
                                 "data": pdata
                             }})
-
             if role == "system":
-                # **Match frontend**: role + parts structure
-                text = "".join([pp.get("text", "") for pp in parts if isinstance(pp, dict) and "text" in pp]) or ""
+                text = "".join([pp.get("text","") for pp in parts if isinstance(pp, dict) and "text" in pp]) or ""
                 if text:
-                    system_instruction = {
-                        "role": "system",
-                        "parts": [{"text": text}],
-                    }
+                    system_instruction = {"role": "system", "parts": [{"text": text}]}
                 continue
-
             if parts:
                 contents.append({"role": gr, "parts": parts})
-
         return contents, system_instruction
 
-
-    def _collect_texts(obj) -> str:
-        """Recursively collect all 'text' fields from a Gemini response tree."""
-        out = []
+    def _collect_texts(obj: Any) -> str:
+        out: List[str] = []
         def walk(o):
             if isinstance(o, dict):
-                if "text" in o and isinstance(o["text"], str):
-                    out.append(o["text"])
-                for v in o.values():
-                    walk(v)
+                if "text" in o and isinstance(o["text"], str): out.append(o["text"])
+                for v in o.values(): walk(v)
             elif isinstance(o, list):
-                for v in o:
-                    walk(v)
+                for v in o: walk(v)
         walk(obj)
         return "".join(out)
+    # ---------- OpenAI-compatible STREAM proxy with usage (revised to forward errors as SSE) ----------
+    async def _openai_stream_with_usage(
+        url: str, headers: dict, body: dict
+    ) -> Tuple[AsyncGenerator[bytes, None], dict]:
+        """
+        Streams upstream SSE back to the client *unchanged* and captures usage
+        from the final chunk (when stream_options.include_usage=True).
+
+        On upstream errors (non-2xx HTTP or transport exceptions), this emits an
+        SSE `event: error` with a JSON payload {provider, model, status, message}
+        so the frontend can display a meaningful error instead of a generic network error.
+
+        Returns (generator, usage_dict_or_empty).
+        """
+        # ensure include_usage in stream
+        so = dict(body.get("stream_options") or {})
+        so["include_usage"] = True
+        body["stream_options"] = so
+
+        usage: Dict[str, Any] = {}  # will fill from final chunk if present
+
+        async def gen() -> AsyncGenerator[bytes, None]:
+            try:
+                async with httpx.AsyncClient(timeout=None) as client:
+                    async with client.stream("POST", url, headers=headers, json=body) as resp:
+                        if resp.status_code >= 400:
+                            raw = await resp.aread()
+                            payload = {
+                                "provider": "openai-compat",
+                                "model": body.get("model"),
+                                "status": resp.status_code,
+                                "message": raw.decode(errors="ignore")[:1000],
+                            }
+                            # Forward as SSE error and terminate cleanly
+                            yield f"event: error\ndata: {json.dumps(payload)}\n\n".encode()
+                            yield b"data: [DONE]\n\n"
+                            return
+
+                        async for raw_line in resp.aiter_lines():
+                            if raw_line is None:
+                                continue
+                            line = raw_line.strip("\r")
+
+                            # Forward exactly what upstream sends.
+                            # We parse usage only from "data: " lines that contain JSON.
+                            if line.startswith("data: "):
+                                data_str = line[6:]
+
+                                # Capture usage if present on this event
+                                try:
+                                    j = json.loads(data_str)
+                                    if isinstance(j, dict) and isinstance(j.get("usage"), dict):
+                                        usage.update(j["usage"])
+                                except Exception:
+                                    pass
+
+                                # Forward the data line (normalize with \n\n separator)
+                                yield f"data: {data_str}\n\n".encode()
+
+                            elif line == "":
+                                # Upstream keep-alive; we re-add separators above for data lines
+                                continue
+                            else:
+                                # Pass through other SSE fields (e.g., "event: ...", "id: ...")
+                                yield (line + "\n\n").encode()
+
+            except Exception as e:
+                # Transport / parsing error ? forward as SSE error
+                payload = {
+                    "provider": "openai-compat",
+                    "model": body.get("model"),
+                    "status": getattr(e, "status_code", 502),
+                    "message": str(e)[:1000],
+                }
+                yield f"event: error\ndata: {json.dumps(payload)}\n\n".encode()
+                yield b"data: [DONE]\n\n"
+                return
+
+        return gen(), usage
 
 
+    # ---------- Gemini STREAM bridge with usage ----------
+    async def _gemini_stream_bridge_with_usage(
+        final_model: str,
+        pe: "ProviderEntry",
+        contents: list,
+        system_instruction: dict | None,
+        gen_cfg: dict,
+    ) -> Tuple[AsyncGenerator[bytes, None], dict, dict]:
+        """
+        Calls :streamGenerateContent and converts responses to OpenAI-style delta events.
+        Also captures final usageMetadata for accurate token counts.
+        Returns (generator, usage_metadata, prompt_modality_details_dict).
 
-    def _collect_texts(obj) -> str:
-        """Recursively collect all 'text' fields from a Gemini response tree."""
-        out = []
-        def walk(o):
-            if isinstance(o, dict):
-                if "text" in o and isinstance(o["text"], str):
-                    out.append(o["text"])
-                for v in o.values():
-                    walk(v)
-            elif isinstance(o, list):
-                for v in o:
-                    walk(v)
-        walk(obj)
-        return "".join(out)
+        This revised version ALSO forwards upstream errors as SSE `event: error`
+        so the frontend can show meaningful messages instead of a generic network error.
+        """
+        # Optional: preflight countTokens (good for per-modality image/PDF token details)
+        prompt_modality_details: Dict[str, Any] = {}
+        try:
+            count_url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{final_model}:countTokens?key={pe.api_key}"
+            )
+            count_body = {
+                "generateContentRequest": {
+                    "contents": contents,
+                    **({"systemInstruction": system_instruction} if system_instruction else {}),
+                    "generationConfig": gen_cfg or {},
+                    "tools": [{"googleSearch": {}}],
+                }
+            }
+            async with httpx.AsyncClient(timeout=60.0) as cclient:
+                cr = await cclient.post(
+                    count_url,
+                    headers={"Content-Type": "application/json"},
+                    json=count_body,
+                )
+                if cr.status_code < 400:
+                    cjson = cr.json()
+                    # Keep whatever details are present (totalTokens, promptTokensDetails, cacheTokensDetails, etc.)
+                    prompt_modality_details = cjson
+        except Exception:
+            # best-effort; not required
+            pass
+
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{final_model}:streamGenerateContent?alt=sse&key={pe.api_key}"
+        )
+        usage_md: Dict[str, Any] = {}
+
+        async def gen() -> AsyncGenerator[bytes, None]:
+            # Emit initial role delta to keep client consistent
+            yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant'}}]})}\n\n".encode()
+
+            try:
+                async with httpx.AsyncClient(timeout=None) as client:
+                    async with client.stream(
+                        "POST",
+                        url,
+                        headers={
+                            "Content-Type": "application/json",
+                            "Accept": "text/event-stream",
+                        },
+                        json={
+                            "contents": contents,
+                            "tools": [{"googleSearch": {}}],
+                            "generationConfig": gen_cfg or {},
+                            **({"systemInstruction": system_instruction} if system_instruction else {}),
+                        },
+                    ) as resp:
+                        if resp.status_code >= 400:
+                            # Forward upstream error as SSE error event (do not raise)
+                            raw = await resp.aread()
+                            payload = {
+                                "provider": "gemini",
+                                "model": final_model,
+                                "status": resp.status_code,
+                                "message": raw.decode(errors="ignore")[:1000],
+                            }
+                            yield f"event: error\ndata: {json.dumps(payload)}\n\n".encode()
+                            yield b"data: [DONE]\n\n"
+                            return
+
+                        async for raw_line in resp.aiter_lines():
+                            if raw_line is None:
+                                continue
+                            line = raw_line.strip("\r")
+                            if not line.startswith("data: "):
+                                # Ignore non-data lines from upstream SSE
+                                continue
+
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                # Upstream finished; we'll send our own DONE below
+                                continue
+
+                            try:
+                                j = json.loads(data_str)
+                            except Exception:
+                                # Ignore malformed chunks
+                                continue
+
+                            # capture usageMetadata if present (usually on the last chunk)
+                            if isinstance(j, dict) and isinstance(j.get("usageMetadata"), dict):
+                                usage_md.update(j["usageMetadata"])
+
+                            # collect any text and emit as OpenAI-style delta
+                            txt = _collect_texts(j)
+                            if txt:
+                                yield f"data: {json.dumps({'choices': [{'delta': {'content': txt}}]})}\n\n".encode()
+
+            except Exception as e:
+                # Network/transport/parsing error ? forward as SSE error
+                payload = {
+                    "provider": "gemini",
+                    "model": final_model,
+                    "status": getattr(e, "status_code", 502),
+                    "message": str(e)[:1000],
+                }
+                yield f"event: error\ndata: {json.dumps(payload)}\n\n".encode()
+                yield b"data: [DONE]\n\n"
+                return
+
+            # Final DONE for client
+            yield b"data: [DONE]\n\n"
+
+        return gen(), usage_md, prompt_modality_details
+
+    # ----------------- upstream call builders -----------------
     async def do_json_call(provider: str, model: str) -> Tuple[int, Dict[str, Any]]:
-        """
-        JSON (non-stream) call.
-        - For PDFs routed to Gemini: translate OpenAI messages -> Gemini body and POST :generateContent
-        - Otherwise: standard OpenAI-compatible JSON passthrough to /v1/chat/completions
-        """
-        # PDF ? Gemini JSON branch
+        # Gemini JSON (PDFs or explicit gemini provider)
         if has_pdf:
             pe = provs.get(provider)
             base = (pe.base_url or "").lower() if pe else ""
             if (provider.lower() == "gemini") or ("generativelanguage.googleapis.com" in base):
                 if not pe or not pe.api_key:
                     raise HTTPException(503, "Provider 'gemini' incomplete configuration")
-                final_model = (model or routes[0].model or "gemini-2.5-pro")
-
+                final_model = (model or (routes[0].model if routes else None) or "gemini-2.5-pro")
                 contents, system_instruction = _openai_to_gemini(messages)
-                body: Dict[str, Any] = {
-                    "contents": contents,
-                    # **Mirror frontend**:
-                    "generationConfig": {"thinkingConfig": {"thinkingBudget": -1}},
-                    "tools": [{"googleSearch": {}}],
-                }
+                gen_cfg: Dict[str, Any] = {"thinkingConfig": {"thinkingBudget": -1}}
                 temp = payload.get("temperature")
                 if isinstance(temp, (int, float)):
-                    body.setdefault("generationConfig", {})["temperature"] = temp
-                if system_instruction:
-                    body["systemInstruction"] = system_instruction
-
+                    gen_cfg["temperature"] = temp
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{final_model}:generateContent?key={pe.api_key}"
-                _trace(f"[ROUTE][JSON TRY] gemini:{final_model} -> {url}")
-
                 async with httpx.AsyncClient(timeout=120.0) as client:
-                    r = await client.post(
-                        url,
-                        headers={"Content-Type": "application/json", "Accept": "application/json"},
-                        json=body
-                    )
+                    r = await client.post(url, headers={"Content-Type": "application/json"}, json={
+                        "contents": contents,
+                        "tools": [{"googleSearch": {}}],
+                        "generationConfig": gen_cfg,
+                        **({"systemInstruction": system_instruction} if system_instruction else {}),
+                    })
                     status = r.status_code
                     try:
                         data = r.json()
@@ -636,7 +797,7 @@ async def chat_completions(
                         data = {"raw": (await r.aread()).decode(errors="ignore")}
                     return status, data
 
-        # Default OpenAI-compatible JSON passthrough
+        # OpenAI-compatible JSON
         pe = provs.get(provider)
         if not pe or not pe.base_url or not pe.api_key:
             raise HTTPException(503, f"Provider '{provider}' incomplete configuration")
@@ -645,77 +806,40 @@ async def chat_completions(
         body = dict(payload)
         body["model"] = model or payload.get("model") or "auto"
         body["stream"] = False
-        _trace(f"[ROUTE][JSON TRY] {provider}:{body['model']} -> {url}")
-        return await _json_proxy(url, headers, body)
+        # (non-stream JSON responses usually include `usage` directly)
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            r = await client.post(url, headers=headers, json=body)
+            status = r.status_code
+            try:
+                data = r.json()
+            except Exception:
+                data = {"raw": (await r.aread()).decode(errors="ignore")}
+            return status, data
 
-    async def do_stream_call(provider: str, model: str) -> AsyncGenerator[bytes, None]:
+    async def do_stream_call(provider: str, model: str) -> Tuple[AsyncGenerator[bytes, None], Dict[str, Any], Dict[str, Any]]:
         """
-        Streaming (SSE) call.
-        - For PDFs routed to Gemini: translate to Gemini body and POST :streamGenerateContent?alt=sse
-          Then bridge Gemini SSE into OpenAI-style delta events for the client.
-        - Otherwise: standard OpenAI-compatible SSE passthrough.
+        Returns (generator, usage_totals_dict, usage_details_dict)
+        - OpenAI: usage_totals_dict = {'prompt_tokens':..., 'completion_tokens':...}
+                  usage_details_dict = {'prompt_tokens_details': {...}, 'completion_tokens_details': {...}} if present
+        - Gemini : usage_totals_dict = {'promptTokenCount':..., 'candidatesTokenCount':..., 'totalTokenCount':...}
+                  usage_details_dict = result from countTokens (may include per-modality arrays)
         """
-        # PDF ? Gemini SSE branch
+        # Gemini stream (PDF)
         if has_pdf:
             pe = provs.get(provider)
             base = (pe.base_url or "").lower() if pe else ""
             if (provider.lower() == "gemini") or ("generativelanguage.googleapis.com" in base):
                 if not pe or not pe.api_key:
                     raise HTTPException(503, "Provider 'gemini' incomplete configuration")
-                final_model = (model or routes[0].model or "gemini-2.5-pro")
-
+                final_model = (model or (routes[0].model if routes else None) or "gemini-2.5-pro")
                 contents, system_instruction = _openai_to_gemini(messages)
-                body: Dict[str, Any] = {
-                    "contents": contents,
-                    # **Mirror frontend**:
-                    "generationConfig": {"thinkingConfig": {"thinkingBudget": -1}},
-                    "tools": [{"googleSearch": {}}],
-                }
+                gen_cfg: Dict[str, Any] = {"thinkingConfig": {"thinkingBudget": -1}}
                 temp = payload.get("temperature")
-                if isinstance(temp, (int, float)):
-                    body.setdefault("generationConfig", {})["temperature"] = temp
-                if system_instruction:
-                    body["systemInstruction"] = system_instruction
+                if isinstance(temp, (int, float)): gen_cfg["temperature"] = temp
+                agen, usage_md, prompt_details = await _gemini_stream_bridge_with_usage(final_model, pe, contents, system_instruction, gen_cfg)
+                return agen, usage_md, prompt_details
 
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{final_model}:streamGenerateContent?alt=sse&key={pe.api_key}"
-                _trace(f"[ROUTE][SSE TRY] gemini:{final_model} -> {url}")
-
-                async def gen() -> AsyncGenerator[bytes, None]:
-                    # initial assistant-role delta
-                    yield f"data: {json.dumps({'choices':[{'delta':{'role':'assistant'}}]})}\n\n".encode()
-                    async with httpx.AsyncClient(timeout=None) as client:
-                        async with client.stream(
-                            "POST",
-                            url,
-                            headers={
-                                "Content-Type": "application/json",
-                                "Accept": "text/event-stream",
-                            },
-                            json=body
-                        ) as resp:
-                            if resp.status_code >= 400:
-                                blob = await resp.aread()
-                                msg = blob.decode(errors="ignore")[:800]
-                                raise HTTPException(status_code=502, detail=f"Gemini upstream {resp.status_code}: {msg}")
-
-                            async for line in resp.aiter_lines():
-                                if not line or not line.startswith("data: "):
-                                    continue
-                                if line.strip() == "data: [DONE]":
-                                    continue
-                                try:
-                                    j = json.loads(line[6:])
-                                except Exception:
-                                    continue
-                                text = _collect_texts(j)
-                                if text:
-                                    _billing_ctx["out_tokens"] += approx_tokens_from_text(text)
-                                    yield f"data: {json.dumps({'choices':[{'delta':{'content':text}}]})}\n\n".encode()
-                    yield b"data: [DONE]\n\n"
-
-                return gen()
-
-        # Default OpenAI-compatible SSE passthrough
+        # OpenAI-compatible stream
         pe = provs.get(provider)
         if not pe or not pe.base_url or not pe.api_key:
             raise HTTPException(503, f"Provider '{provider}' incomplete configuration")
@@ -724,27 +848,51 @@ async def chat_completions(
         body = dict(payload)
         body["model"] = model or payload.get("model") or "auto"
         body["stream"] = True
-        _trace(f"[ROUTE][SSE TRY] {provider}:{body['model']} -> {url}")
-        return _sse_passthrough_and_bill(url, headers, body)
+        agen, usage = await _openai_stream_with_usage(url, headers, body)
 
+        # usage details (if provided)
+        usage_details: Dict[str, Any] = {}
+        if "prompt_tokens_details" in usage or "completion_tokens_details" in usage:
+            usage_details = {
+                "prompt_tokens_details": usage.get("prompt_tokens_details", {}),
+                "completion_tokens_details": usage.get("completion_tokens_details", {}),
+            }
+        return agen, usage, usage_details
 
-
+    # ----------------- run candidates with failover -----------------
     last_error: Optional[Exception] = None
     tried: List[str] = []
 
-    # --- STREAM-PFAD ---
     if wants_stream:
         async def stream_wrapper() -> AsyncGenerator[bytes, None]:
-            # lokale Abrechnung
-            _billing_ctx["out_tokens"] = 0
+            used_provider: Optional[str] = None
+            used_model: Optional[str] = None
+            in_tokens: Optional[int] = None
+            out_tokens: Optional[int] = None
+            extra_details: Dict[str, Any] = {}
+
             for provider, model in ordered:
                 tried.append(f"{provider}:{model}")
                 try:
-                    agen = await do_stream_call(provider, model)
-                    # Erfolgreich: 1:1 SSE zu Client streamen
+                    agen, usage_totals, usage_details = await do_stream_call(provider, model)
+                    first = True
                     async for chunk in agen:
+                        if first:
+                            used_provider = provider
+                            used_model = model
+                            first = False
                         yield chunk
-                    # Wenn wir hier sind ? Stream beendet, Abrechnung/Log unten
+                    # After stream finished, capture usage for billing/logging
+                    if usage_totals:
+                        # OpenAI format
+                        if "prompt_tokens" in usage_totals or "completion_tokens" in usage_totals:
+                            in_tokens = usage_totals.get("prompt_tokens")
+                            out_tokens = usage_totals.get("completion_tokens")
+                        # Gemini format
+                        elif "promptTokenCount" in usage_totals or "candidatesTokenCount" in usage_totals:
+                            in_tokens = usage_totals.get("promptTokenCount")
+                            out_tokens = usage_totals.get("candidatesTokenCount")
+                        extra_details = usage_details or {}
                     last_error = None
                     break
                 except Exception as e:
@@ -752,63 +900,114 @@ async def chat_completions(
                     last_error = e
                     continue
 
-            # Billing + Usage
+            # Fallback to approximate if provider gave no usage
+            if in_tokens is None:
+                # include ALL system+user text this time (as requested)
+                all_texts: List[str] = []
+                for m in messages:
+                    c = m.get("content")
+                    if isinstance(c, str): all_texts.append(c)
+                    elif isinstance(c, list):
+                        for p in c:
+                            if p.get("type") == "text":
+                                all_texts.append(p.get("text",""))
+                in_tokens = approx_tokens_from_text(" ".join(all_texts))
+            if out_tokens is None:
+                # we did not collect deltas here; treat as 0 if provider omitted usage
+                out_tokens = 0
+
+            # finalize billing + usage row
+            bill_model = (used_model or requested_model or (ordered[0][1] if ordered else "unknown"))
+            bill_provider = (used_provider or (ordered[0][0] if ordered else "unknown"))
+
             cost = await charge_llm(
-                session,
-                user,
-                model=requested_model or (ordered[0][1] if ordered else "unknown"),
-                provider=(ordered[0][0] if ordered else "unknown"),
-                input_tokens=est_in,
-                output_tokens=_billing_ctx["out_tokens"],
+                session, user,
+                model=bill_model,
+                provider=bill_provider,
+                input_tokens=int(in_tokens or 0),
+                output_tokens=int(out_tokens or 0),
             )
             await log_usage(
-                session,
-                user,
-                model=requested_model or "auto",
-                provider="auto",
+                session, user,
+                model=bill_model,
+                provider=bill_provider,
                 model_type=ModelType.VLM if is_vlm else ModelType.LLM,
-                input_count=est_in,
-                output_count=_billing_ctx["out_tokens"],
+                input_count=int(in_tokens or 0),
+                output_count=int(out_tokens or 0),
                 billed_credits=cost,
-                response_meta={"tried": tried, "error": str(last_error) if last_error else None},
+                response_meta={"tried": tried, "stream": True, "usage_details": extra_details},
             )
             await session.commit()
 
-            if last_error:
-                errline = f'data: {json.dumps({"error": {"message": "All providers failed. See server logs."}})}\n\n'
-                yield errline.encode()
-            # DONE wird im Passthrough gesendet; falls alle fehlschlugen, schicken wir hier kein extra DONE mehr.
+            if last_error and not used_provider:
+                payload = {
+                    "status": getattr(last_error, "status_code", 503),
+                    "message": str(last_error),
+                    "tried": tried,
+                }
+                yield f"event: error\ndata: {json.dumps(payload)}\n\n".encode()
+                yield b"data: [DONE]\n\n"
+                return
 
         return StreamingResponse(stream_wrapper(), media_type="text/event-stream")
 
-    # --- NON-STREAM-PFAD (JSON) ---
-    # wir versuchen nacheinander Provider; der erste erfolgreiche JSON-Call wird geliefert
+    # --------- JSON (non-stream) path ----------
     for provider, model in ordered:
         tried.append(f"{provider}:{model}")
         try:
             status, data = await do_json_call(provider, model)
-            # Output-Token grob schaetzen
-            out_text = _extract_assistant_text(data)
-            out_tokens = approx_tokens_from_text(out_text)
+
+            # Prefer provider-reported usage
+            in_tokens: Optional[int] = None
+            out_tokens: Optional[int] = None
+            meta_usage: Dict[str, Any] = {}
+
+            # OpenAI JSON usage
+            if isinstance(data, dict) and "usage" in data and isinstance(data["usage"], dict):
+                u = data["usage"]
+                in_tokens = u.get("prompt_tokens")
+                out_tokens = u.get("completion_tokens")
+                meta_usage = {
+                    "prompt_tokens_details": u.get("prompt_tokens_details", {}),
+                    "completion_tokens_details": u.get("completion_tokens_details", {}),
+                }
+            # Gemini JSON usage
+            if isinstance(data, dict) and "usageMetadata" in data and isinstance(data["usageMetadata"], dict):
+                u = data["usageMetadata"]
+                in_tokens = u.get("promptTokenCount", in_tokens)
+                out_tokens = u.get("candidatesTokenCount", out_tokens)
+                meta_usage = {**meta_usage, "usageMetadata": u}
+
+            # Fallback if missing: count ALL text (system+user) for input, assistant text for output
+            if in_tokens is None:
+                all_texts: List[str] = []
+                for m in messages:
+                    c = m.get("content")
+                    if isinstance(c, str): all_texts.append(c)
+                    elif isinstance(c, list):
+                        for p in c:
+                            if p.get("type") == "text":
+                                all_texts.append(p.get("text",""))
+                in_tokens = approx_tokens_from_text(" ".join(all_texts))
+            if out_tokens is None:
+                out_tokens = approx_tokens_from_text(_extract_assistant_text(data))
 
             cost = await charge_llm(
-                session,
-                user,
+                session, user,
                 model=requested_model or model or "auto",
                 provider=provider,
-                input_tokens=est_in,
-                output_tokens=out_tokens,
+                input_tokens=int(in_tokens or 0),
+                output_tokens=int(out_tokens or 0),
             )
             await log_usage(
-                session,
-                user,
+                session, user,
                 model=requested_model or model or "auto",
                 provider=provider,
                 model_type=ModelType.VLM if is_vlm else ModelType.LLM,
-                input_count=est_in,
-                output_count=out_tokens,
+                input_count=int(in_tokens or 0),
+                output_count=int(out_tokens or 0),
                 billed_credits=cost,
-                response_meta={"tried": tried, "json": True},
+                response_meta={"tried": tried, "json": True, "usage_details": meta_usage},
             )
             await session.commit()
             return JSONResponse(data, status_code=status)
@@ -858,6 +1057,9 @@ async def audio_speech(
 # -----------------------------------------------------------------------------
 # Speech-to-Text with priority failover
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Speech-to-Text with priority failover
+# -----------------------------------------------------------------------------
 
 @app.post("/v1/audio/transcriptions")
 async def audio_transcriptions(
@@ -866,20 +1068,97 @@ async def audio_transcriptions(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    """
+    Forward ASR to the first healthy provider according to RoutePref.
+    Billing:
+      - input_count = approximate audio seconds (16 kHz * 16-bit mono heuristic)
+      - output_count = characters in transcript text returned by provider
+    """
     routes = await _ordered_routes(session, RouteKind.ASR)
     blob = await file.read()
+    filename = file.filename or "audio.wav"
     last_error = None
+
+    # Heuristic seconds (keeps existing behavior)
+    seconds = max(1, int(len(blob) / (16000 * 2)))  # 16kHz * 16-bit mono approx
+
     for r in routes:
         try:
-            asr_json = await asr_forward(session, r.model or model, blob, file.filename or "audio.wav", provider=r.provider)
-            seconds = max(1, int(len(blob) / (16000 * 2)))  # 16kHz * 16-bit mono approx
-            cost = await charge_asr(session, user, model=r.model or model, provider=r.provider, seconds=seconds)
-            await log_usage(session, user, model=r.model or model, provider=r.provider, model_type=ModelType.ASR,
-                            input_count=seconds, output_count=0, billed_credits=cost)
+            final_model = r.model or model
+
+            # Forward to provider
+            asr_json = await asr_forward(
+                session,
+                final_model,
+                blob,
+                filename,
+                provider=r.provider,
+            )
+
+            # --- robust transcript extraction for character counting ---
+            transcript = ""
+            try:
+                if isinstance(asr_json, dict):
+                    # OpenAI / Whisper style
+                    if isinstance(asr_json.get("text"), str):
+                        transcript = asr_json["text"]
+                    # Some engines use "transcript"
+                    elif isinstance(asr_json.get("transcript"), str):
+                        transcript = asr_json["transcript"]
+                    # Segment-style payloads
+                    elif isinstance(asr_json.get("segments"), list):
+                        transcript = " ".join(
+                            s.get("text", "")
+                            for s in asr_json["segments"]
+                            if isinstance(s, dict)
+                        )
+                    # Alt Deepgram/Google-like "results"
+                    elif isinstance(asr_json.get("results"), list):
+                        parts = []
+                        for res in asr_json["results"]:
+                            if not isinstance(res, dict):
+                                continue
+                            alts = res.get("alternatives") or []
+                            if alts and isinstance(alts[0], dict):
+                                parts.append(alts[0].get("transcript", ""))
+                        transcript = " ".join(parts)
+            except Exception:
+                # Never fail billing on parsing
+                transcript = ""
+
+            out_chars = len(transcript or "")
+
+            # Billing + usage log
+            cost = await charge_asr(
+                session,
+                user,
+                model=final_model,
+                provider=r.provider,
+                seconds=seconds,
+            )
+            await log_usage(
+                session,
+                user,
+                model=final_model,
+                provider=r.provider,
+                model_type=ModelType.ASR,
+                input_count=seconds,
+                output_count=out_chars,
+                billed_credits=cost,
+            )
             await session.commit()
+
+            # Return upstream JSON 1:1
             return JSONResponse(asr_json)
+
         except Exception as e:
-            _errlog.info(f"asr route failed provider={r.provider} model={r.model} err={e}")
+            _errlog.info(
+                f"asr route failed provider={r.provider} model={r.model} err={e}"
+            )
             last_error = e
             continue
-    raise HTTPException(status_code=503, detail=f"ASR providers unavailable. Last error: {last_error}")
+
+    raise HTTPException(
+        status_code=503,
+        detail=f"ASR providers unavailable. Last error: {last_error}",
+    )
