@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # serve.py
 import os, socket, pathlib, atexit, signal
 import uvicorn
