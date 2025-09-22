@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # main.py
 import os
 import json
@@ -23,6 +24,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Dict, Any
+import base64  
 
 # Try to use DATA_DIR if it's already defined; otherwise fall back to ./data or env
 try:
@@ -113,7 +115,7 @@ from models import (
     ModelType,
     RoutePref,
     RouteKind,
-    ProviderEndpoint,   # NEU: für Base-URL + API-Key
+    ProviderEndpoint,   # for Base-URL + API-Key
 )
 from security import get_current_user
 from billing import (
@@ -124,13 +126,13 @@ from billing import (
     log_usage,
 )
 from providers import (
-    openai_chat_stream,  # belassen (wird hier nicht mehr benötigt, aber kompatibel)
-    gemini_stream,       # weiterhin nutzbar, wir streamen aber unten via Passthrough
+    openai_chat_stream,  # (kept for compatibility)
+    gemini_stream,       # still available; we stream via passthrough below
     tts_forward,         # forward TTS
     asr_forward,         # forward ASR
 )
 
-import httpx  # NEU: für echten SSE-Passthrough
+import httpx  # for real SSE passthrough
 
 # -----------------------------------------------------------------------------
 # App + CORS + static admin
@@ -261,20 +263,29 @@ async def _provider_map(session: AsyncSession) -> Dict[str, ProviderEndpoint]:
     return {p.name: p for p in items}
 
 # -----------------------------------------------------------------------------
-# SSE/JSON Hilfsfunktionen für Passthrough
+# SSE/JSON Helpers for passthrough
 # -----------------------------------------------------------------------------
-
 def _looks_like_vlm(messages: List[Dict[str, Any]]) -> bool:
     try:
         for m in messages or []:
             c = m.get("content")
             if isinstance(c, list):
                 for p in c:
-                    if isinstance(p, dict) and (p.get("type") in ("image_url", "pdf") or "image_url" in p):
+                    if not isinstance(p, dict):
+                        continue
+                    t = (p.get("type") or "").lower()
+                    mime = (p.get("mime_type") or "").lower()
+                    if t in ("image_url", "pdf"):
+                        return True
+                    # NEW: treat PDFs/images sent as input_file/file as VLM
+                    if t in ("input_file", "file") and (
+                        mime.startswith("image/") or "pdf" in mime or mime == "application/pdf"
+                    ):
                         return True
     except Exception:
         pass
     return False
+
 
 def _extract_assistant_text(payload: Dict[str, Any]) -> str:
     # OpenAI
@@ -309,6 +320,7 @@ def _extract_assistant_text(payload: Dict[str, Any]) -> str:
         txt = "".join([str(p.get("text", "")) for p in payload["content"] if isinstance(p, dict)])
         return txt
     return ""
+
 async def _json_proxy(url: str, headers: Dict[str, str], body: Dict[str, Any]) -> tuple[int, Dict[str, Any]]:
     _trace(f"[UPSTREAM][JSON REQ] POST {url}")
     _trace(f"[UPSTREAM][JSON REQ HEADERS] {_redact_headers(headers)}")
@@ -405,11 +417,26 @@ async def _sse_passthrough_and_bill(
             return
 
 
-# Eine sehr kleine "Kontextbox" für die laufende Anfrage (nur innerhalb des Request-Tasks verwendet)
+# A tiny "billing context" for the running request (used only inside request task)
 _billing_ctx: Dict[str, int] = {"out_tokens": 0}
 
+def _gemini_capable_vlm(routes):
+    """
+    Accept Gemini via provider 'gemini' OR 'vertex' (when model is gemini-*) for PDF.
+    """
+    out = []
+    for r in routes:
+        prov = (r.provider or "").lower()
+        model = (r.model or "").lower()
+        if prov == "gemini":
+            out.append(r)
+        elif prov == "vertex" and model.startswith("gemini-"):
+            out.append(r)
+    return out
+
+
 # -----------------------------------------------------------------------------
-# Chat Completions (LLM/VLM) – SSE streaming with provider failover
+# Chat Completions (LLM/VLM) Â– SSE streaming with provider failover
 # -----------------------------------------------------------------------------
 @app.post("/v1/chat/completions")
 async def chat_completions(
@@ -436,6 +463,36 @@ async def chat_completions(
 
     # Messages & kind detection
     messages = payload.get("messages") or []
+
+    # === TRACE: incoming payload summary (no secrets) ===
+    def _summarize_messages(msgs: list[dict]) -> list[dict]:
+        out = []
+        for m in msgs or []:
+            item = {"role": m.get("role"), "string_len": None, "parts": []}
+            c = m.get("content")
+            if isinstance(c, str):
+                item["string_len"] = len(c)
+            elif isinstance(c, list):
+                for p in c:
+                    if not isinstance(p, dict):
+                        continue
+                    t = (p.get("type") or "").lower()
+                    mime = (p.get("mime_type") or "").lower()
+                    data_len = len(p.get("data") or "") if isinstance(p.get("data"), str) else None
+                    item["parts"].append({
+                        "type": t,
+                        "mime": mime,
+                        "has_data": isinstance(p.get("data"), (str, bytes, bytearray)),
+                        "data_len": data_len,
+                        "has_image_url": bool(p.get("image_url")),
+                        "image_url_is_dataurl": isinstance(p.get("image_url"), dict) and str(p.get("image_url", {}).get("url", "")).startswith("data:"),
+                    })
+            out.append(item)
+        return out
+
+    _trace("[CHAT] incoming model=%s stream=%s" % (payload.get("model"), payload.get("stream", True)))
+    _trace("[CHAT] messages summary: " + _preview(_summarize_messages(messages)))
+
     is_vlm = _looks_like_vlm(messages)
 
     route_kind = RouteKind.VLM if is_vlm else RouteKind.LLM
@@ -443,31 +500,54 @@ async def chat_completions(
     if not routes and route_kind == RouteKind.VLM:
         routes = await _ordered_routes(session, RouteKind.LLM)
 
+    _trace(f"[ROUTE] _looks_like_vlm={is_vlm} -> route_kind={getattr(route_kind,'name',route_kind)}")
+
     # Detect PDFs specifically (forces Gemini provider)
-    def _has_pdf(msgs: list[dict]) -> bool:
-        try:
-            for m in msgs:
-                c = m.get("content")
-                if isinstance(c, list):
-                    for p in c:
-                        if isinstance(p, dict) and p.get("type") == "pdf":
-                            return True
-        except Exception:
-            pass
-        return False
+    def _has_pdf(messages: list[dict]) -> bool:
+          for m in messages or []:
+              c = m.get("content")
+              if isinstance(c, list):
+                  for p in c:
+                      if not isinstance(p, dict): 
+                          continue
+                      t = (p.get("type") or "").lower()
+                      mime = (p.get("mime_type") or "").lower()
+                      if t == "pdf":
+                          return True
+                      if t in {"input_file", "file"} and ("pdf" in mime or mime == "application/pdf"):
+                          return True
+          return False
 
     has_pdf = _has_pdf(messages)
+    _trace(f"[ROUTE] _has_pdf={has_pdf}")
+    _trace(f"[ROUTE] initial routes found={len(routes)} -> {[f'{r.provider}:{r.model}' for r in routes]}")
+
     if has_pdf:
-        routes = [r for r in routes if r.provider.lower() == "gemini"]
+
+        # Ensure we have VLM routes available if we started on LLM
+        if route_kind == RouteKind.LLM:
+          vlm_routes = await _ordered_routes(session, RouteKind.VLM)
+          _trace(f"[ROUTE] swapping to VLM routes for PDF; VLM routes={len(vlm_routes)} -> {[f'{r.provider}:{r.model}' for r in vlm_routes]}")
+          # Prefer VLM routes for PDFs; if none defined, keep current 'routes'
+          if vlm_routes:
+            routes = vlm_routes
+
+
+        # accept either provider='gemini' OR provider='vertex' with a gemini-* model
+        before = [f"{r.provider}:{r.model}" for r in routes]
+        routes = _gemini_capable_vlm(routes)
+        after = [f"{r.provider}:{r.model}" for r in routes]
+        _trace(f"[ROUTE] _gemini_capable_vlm filtered {before} -> {after}")
         if not routes:
             raise HTTPException(
                 400,
-                "PDF input requires a Gemini VLM route. Configure provider 'gemini' with a valid API key in Admin ? Routes."
+                ("PDF input requires a Gemini-capable VLM route. "
+                "Add provider 'gemini' OR 'vertex' with a gemini-* model in Admin ? Routes.")
             )
 
-    # Build candidate list: requested_model first, then route defaults
+    # Build candidate list: requested_model first (if not 'auto'), then route defaults
     candidates: List[Tuple[str, str]] = []
-    if requested_model:
+    if requested_model and requested_model.lower() != "auto":  # <<< FIX: skip 'auto' to honor priorities
         for r in routes:
             candidates.append((r.provider, requested_model))
     for r in routes:
@@ -479,6 +559,8 @@ async def chat_completions(
             seen.add(t); ordered.append(t)
 
     provs = await _provider_map(session)
+    _trace(f"[ROUTE] ordered candidates={ordered}")
+    _trace(f"[PROV] provider map: {list(provs.keys())}")
 
     # ------------- token helpers (still used as fallback) ----------------
     def approx_tokens_from_text(text: str) -> int:
@@ -509,43 +591,100 @@ async def chat_completions(
             return None
 
     def _openai_to_gemini(msgs: list[dict]) -> tuple[list, dict | None]:
+        """
+        Convert OpenAI-style messages -> Gemini 'contents' + optional systemInstruction.
+        Supports: text, image_url data:URL, and base64 PDFs via input_file/file.
+        """
         contents: list = []
         system_instruction: dict | None = None
+
+        def _data_url_to_inline_data(url: str) -> dict | None:
+            try:
+                if not isinstance(url, str) or not url.startswith("data:") or ";base64," not in url:
+                    return None
+                head, b64 = url.split(",", 1)
+                mime = head[5:head.find(";")] or "application/octet-stream"
+                return {"inlineData": {"mimeType": mime, "data": b64}}
+            except Exception:
+                return None
+
         for m in msgs or []:
             role = m.get("role", "user")
             gr = "user" if role in ("user", "system") else "model"
             parts = []
             c = m.get("content")
+
             if isinstance(c, str):
                 if c.strip():
                     parts.append({"text": c})
             elif isinstance(c, list):
                 for p in c:
-                    if not isinstance(p, dict): continue
-                    t = p.get("type")
+                    if not isinstance(p, dict):
+                        continue
+                    t = (p.get("type") or "").lower()
+
                     if t == "text":
                         txt = p.get("text", "")
-                        if txt.strip(): parts.append({"text": txt})
+                        if txt.strip():
+                            parts.append({"text": txt})
+
                     elif t == "image_url":
                         img = p.get("image_url")
                         url = img.get("url") if isinstance(img, dict) else (img if isinstance(img, str) else "")
                         idata = _data_url_to_inline_data(url)
-                        if idata: parts.append(idata)
+                        if idata:
+                            parts.append(idata)
+
                     elif t == "pdf":
-                        pdata = p.get("data", "")
-                        if pdata:
+                        b64 = p.get("data") or ""
+                        if b64:
                             parts.append({"inlineData": {
                                 "mimeType": p.get("mime_type") or "application/pdf",
-                                "data": pdata
+                                "data": b64 if isinstance(b64, str) else base64.b64encode(b64).decode("utf-8"),
                             }})
-            if role == "system":
-                text = "".join([pp.get("text","") for pp in parts if isinstance(pp, dict) and "text" in pp]) or ""
-                if text:
-                    system_instruction = {"role": "system", "parts": [{"text": text}]}
-                continue
+
+                    elif t in ("input_file", "file"):
+                        b64 = p.get("data", "")
+                        mime = p.get("mime_type") or "application/octet-stream"
+                        if isinstance(b64, (bytes, bytearray)):
+                            b64 = base64.b64encode(b64).decode("utf-8")
+                        if isinstance(b64, str) and b64:
+                            parts.append({"inlineData": {"mimeType": mime, "data": b64}})
+
+            if role == "system" and parts:
+                # Gemini supports a top-level systemInstruction; we fold system text there.
+                # If both system & user text exist, we still include everything as user parts too.
+                sys_txt = "\n".join([pp.get("text","") for pp in parts if "text" in pp]).strip()
+                if sys_txt:
+                    system_instruction = {"role": "system", "parts": [{"text": sys_txt}]}
             if parts:
                 contents.append({"role": gr, "parts": parts})
+
+        # TRACE: concise summary of what we will send to Gemini
+        try:
+            def _flat_summary(contents_in):
+                s = []
+                for c in contents_in:
+                    role = c.get("role")
+                    parts = c.get("parts") or []
+                    s_parts = []
+                    for p in parts:
+                        if "text" in p:
+                            txt = p["text"]
+                            s_parts.append({"text_len": len(txt)})
+                        elif "inlineData" in p:
+                            idt = p["inlineData"]
+                            s_parts.append({"inlineData": {"mime": idt.get("mimeType"), "data_len": len(idt.get("data") or "")}})
+                    s.append({"role": role, "parts": s_parts})
+                return s
+            _trace("[GEMINI] contents summary: " + _preview(_flat_summary(contents)))
+            if system_instruction:
+                _trace("[GEMINI] systemInstruction len=%d" % sum(len(pp.get("text","")) for pp in (system_instruction.get("parts") or [])))
+        except Exception:
+            pass
+
         return contents, system_instruction
+
 
     def _collect_texts(obj: Any) -> str:
         out: List[str] = []
@@ -557,7 +696,36 @@ async def chat_completions(
                 for v in o: walk(v)
         walk(obj)
         return "".join(out)
-    # ---------- OpenAI-compatible STREAM proxy with usage (revised to forward errors as SSE) ----------
+
+    # --- helper: rewrite {type:"pdf"} -> {type:"input_file"} for OpenAI-style proxies ---
+    def _rewrite_pdf_to_input_file(msgs: list[dict]) -> list[dict]:
+        out_msgs: List[dict] = []
+        for m in msgs or []:
+            c = m.get("content")
+            if isinstance(c, list):
+                new_parts = []
+                for p in c:
+                    if isinstance(p, dict) and (p.get("type") or "").lower() == "pdf":
+                        b64 = p.get("data")
+                        mime = p.get("mime_type") or "application/pdf"
+                        # Normalize bytes to b64 if needed
+                        if isinstance(b64, (bytes, bytearray)):
+                            b64 = base64.b64encode(b64).decode("utf-8")
+                        new_parts.append({
+                            "type": "input_file",
+                            "mime_type": mime,
+                            "data": b64,
+                        })
+                    else:
+                        new_parts.append(p)
+                nm = dict(m)
+                nm["content"] = new_parts
+                out_msgs.append(nm)
+            else:
+                out_msgs.append(m)
+        return out_msgs
+
+    # ---------- OpenAI-compatible STREAM proxy with usage (revised) ----------
     async def _openai_stream_with_usage(
         url: str, headers: dict, body: dict
     ) -> Tuple[AsyncGenerator[bytes, None], dict]:
@@ -565,22 +733,21 @@ async def chat_completions(
         Streams upstream SSE back to the client *unchanged* and captures usage
         from the final chunk (when stream_options.include_usage=True).
 
-        On upstream errors (non-2xx HTTP or transport exceptions), this emits an
-        SSE `event: error` with a JSON payload {provider, model, status, message}
-        so the frontend can display a meaningful error instead of a generic network error.
-
-        Returns (generator, usage_dict_or_empty).
+        NEW: If upstream omits completion_tokens, we approximate it by counting
+        the streamed assistant deltas (text only), so output tokens are never 0.
         """
         # ensure include_usage in stream
         so = dict(body.get("stream_options") or {})
         so["include_usage"] = True
         body["stream_options"] = so
 
-        usage: Dict[str, Any] = {}  # will fill from final chunk if present
+        usage: Dict[str, Any] = {}
+        out_parts: List[str] = []  # collect assistant deltas
 
         async def gen() -> AsyncGenerator[bytes, None]:
             try:
                 async with httpx.AsyncClient(timeout=None) as client:
+                    _trace(f"[OPENAI] STREAM to {url}")
                     async with client.stream("POST", url, headers=headers, json=body) as resp:
                         if resp.status_code >= 400:
                             raw = await resp.aread()
@@ -590,7 +757,6 @@ async def chat_completions(
                                 "status": resp.status_code,
                                 "message": raw.decode(errors="ignore")[:1000],
                             }
-                            # Forward as SSE error and terminate cleanly
                             yield f"event: error\ndata: {json.dumps(payload)}\n\n".encode()
                             yield b"data: [DONE]\n\n"
                             return
@@ -601,15 +767,27 @@ async def chat_completions(
                             line = raw_line.strip("\r")
 
                             # Forward exactly what upstream sends.
-                            # We parse usage only from "data: " lines that contain JSON.
+                            # We parse usage and collect assistant delta from "data: " lines that contain JSON.
                             if line.startswith("data: "):
                                 data_str = line[6:]
 
-                                # Capture usage if present on this event
+                                # Capture usage + collect delta text
                                 try:
                                     j = json.loads(data_str)
-                                    if isinstance(j, dict) and isinstance(j.get("usage"), dict):
-                                        usage.update(j["usage"])
+                                    if isinstance(j, dict):
+                                        if isinstance(j.get("usage"), dict):
+                                            usage.update(j["usage"])
+                                        ch = (j.get("choices") or [{}])[0]
+                                        delta = ch.get("delta") or {}
+                                        cnt = delta.get("content")
+                                        if isinstance(cnt, str):
+                                            out_parts.append(cnt)
+                                        elif isinstance(cnt, list):
+                                            out_parts.extend(
+                                                p.get("text", "")
+                                                for p in cnt
+                                                if isinstance(p, dict) and p.get("type") == "text"
+                                            )
                                 except Exception:
                                     pass
 
@@ -635,13 +813,21 @@ async def chat_completions(
                 yield b"data: [DONE]\n\n"
                 return
 
+            # Fallback for missing completion_tokens
+            if "completion_tokens" not in usage:
+                joined = "".join(out_parts)
+                if joined:
+                    usage["completion_tokens"] = approx_tokens_from_text(joined)
+
+            yield b"data: [DONE]\n\n"
+
         return gen(), usage
 
 
     # ---------- Gemini STREAM bridge with usage ----------
     async def _gemini_stream_bridge_with_usage(
         final_model: str,
-        pe: "ProviderEntry",
+        pe: ProviderEndpoint,
         contents: list,
         system_instruction: dict | None,
         gen_cfg: dict,
@@ -651,8 +837,7 @@ async def chat_completions(
         Also captures final usageMetadata for accurate token counts.
         Returns (generator, usage_metadata, prompt_modality_details_dict).
 
-        This revised version ALSO forwards upstream errors as SSE `event: error`
-        so the frontend can show meaningful messages instead of a generic network error.
+        This revised version ALSO forwards upstream errors as SSE `event: error`.
         """
         # Optional: preflight countTokens (good for per-modality image/PDF token details)
         prompt_modality_details: Dict[str, Any] = {}
@@ -677,7 +862,6 @@ async def chat_completions(
                 )
                 if cr.status_code < 400:
                     cjson = cr.json()
-                    # Keep whatever details are present (totalTokens, promptTokensDetails, cacheTokensDetails, etc.)
                     prompt_modality_details = cjson
         except Exception:
             # best-effort; not required
@@ -688,6 +872,7 @@ async def chat_completions(
             f"{final_model}:streamGenerateContent?alt=sse&key={pe.api_key}"
         )
         usage_md: Dict[str, Any] = {}
+        collected_txt: List[str] = []  # NEW: collect assistant text for fallback
 
         async def gen() -> AsyncGenerator[bytes, None]:
             # Emit initial role delta to keep client consistent
@@ -695,6 +880,7 @@ async def chat_completions(
 
             try:
                 async with httpx.AsyncClient(timeout=None) as client:
+                    _trace(f"[GEMINI] STREAM model={final_model} (PDF path) calling :streamGenerateContent")
                     async with client.stream(
                         "POST",
                         url,
@@ -748,6 +934,7 @@ async def chat_completions(
                             # collect any text and emit as OpenAI-style delta
                             txt = _collect_texts(j)
                             if txt:
+                                collected_txt.append(txt)  # NEW
                                 yield f"data: {json.dumps({'choices': [{'delta': {'content': txt}}]})}\n\n".encode()
 
             except Exception as e:
@@ -762,6 +949,10 @@ async def chat_completions(
                 yield b"data: [DONE]\n\n"
                 return
 
+            # If Gemini omitted candidatesTokenCount, approximate from streamed text
+            if "candidatesTokenCount" not in usage_md and collected_txt:
+                usage_md["candidatesTokenCount"] = approx_tokens_from_text("".join(collected_txt))
+
             # Final DONE for client
             yield b"data: [DONE]\n\n"
 
@@ -769,6 +960,7 @@ async def chat_completions(
 
     # ----------------- upstream call builders -----------------
     async def do_json_call(provider: str, model: str) -> Tuple[int, Dict[str, Any]]:
+        _trace(f"[UPSTREAM] do_json_call provider={provider} model={model} has_pdf={has_pdf}")
         # Gemini JSON (PDFs or explicit gemini provider)
         if has_pdf:
             pe = provs.get(provider)
@@ -783,6 +975,7 @@ async def chat_completions(
                 if isinstance(temp, (int, float)):
                     gen_cfg["temperature"] = temp
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{final_model}:generateContent?key={pe.api_key}"
+                _trace(f"[GEMINI] JSON model={final_model} (PDF path) calling :generateContent")
                 async with httpx.AsyncClient(timeout=120.0) as client:
                     r = await client.post(url, headers={"Content-Type": "application/json"}, json={
                         "contents": contents,
@@ -806,6 +999,21 @@ async def chat_completions(
         body = dict(payload)
         body["model"] = model or payload.get("model") or "auto"
         body["stream"] = False
+
+        # If we have a PDF and we're going to an OpenAI-style proxy, convert "pdf" -> "input_file"
+        if has_pdf:
+            try:
+                body["messages"] = _rewrite_pdf_to_input_file(body.get("messages") or [])
+                _trace("[OPENAI] rewritten messages (pdf->input_file) summary: " +
+                       _preview([{"role": m.get("role"), "parts":[{"type": (p.get("type") if isinstance(p,dict) else None),
+                                                                   "mime_type": (p.get("mime_type") if isinstance(p,dict) else None),
+                                                                   "has_data": isinstance((p or {}).get('data'), (str, bytes, bytearray))}
+                                                                  for p in (m.get("content") or []) if isinstance(p, dict)]}
+                               for m in body["messages"] ]))
+            except Exception as _:
+                pass
+
+        _trace(f"[OPENAI] JSON to {url}")
         # (non-stream JSON responses usually include `usage` directly)
         async with httpx.AsyncClient(timeout=120.0) as client:
             r = await client.post(url, headers=headers, json=body)
@@ -824,6 +1032,7 @@ async def chat_completions(
         - Gemini : usage_totals_dict = {'promptTokenCount':..., 'candidatesTokenCount':..., 'totalTokenCount':...}
                   usage_details_dict = result from countTokens (may include per-modality arrays)
         """
+        _trace(f"[UPSTREAM] do_stream_call provider={provider} model={model} has_pdf={has_pdf}")
         # Gemini stream (PDF)
         if has_pdf:
             pe = provs.get(provider)
@@ -848,6 +1057,20 @@ async def chat_completions(
         body = dict(payload)
         body["model"] = model or payload.get("model") or "auto"
         body["stream"] = True
+
+        # If we have a PDF and we're going to an OpenAI-style proxy, convert "pdf" -> "input_file"
+        if has_pdf:
+            try:
+                body["messages"] = _rewrite_pdf_to_input_file(body.get("messages") or [])
+                _trace("[OPENAI] rewritten messages (pdf->input_file) summary: " +
+                       _preview([{"role": m.get("role"), "parts":[{"type": (p.get("type") if isinstance(p,dict) else None),
+                                                                   "mime_type": (p.get("mime_type") if isinstance(p,dict) else None),
+                                                                   "has_data": isinstance((p or {}).get('data'), (str, bytes, bytearray))}
+                                                                  for p in (m.get("content") or []) if isinstance(p, dict)]}
+                               for m in body["messages"] ]))
+            except Exception as _:
+                pass
+
         agen, usage = await _openai_stream_with_usage(url, headers, body)
 
         # usage details (if provided)
@@ -880,6 +1103,7 @@ async def chat_completions(
                         if first:
                             used_provider = provider
                             used_model = model
+                            _trace(f"[RUN] streaming from provider={used_provider} model={used_model}")
                             first = False
                         yield chunk
                     # After stream finished, capture usage for billing/logging
@@ -919,6 +1143,8 @@ async def chat_completions(
             # finalize billing + usage row
             bill_model = (used_model or requested_model or (ordered[0][1] if ordered else "unknown"))
             bill_provider = (used_provider or (ordered[0][0] if ordered else "unknown"))
+
+            _trace(f"[BILL] provider={bill_provider} model={bill_model} in_tokens={in_tokens} out_tokens={out_tokens} tried={tried}")
 
             cost = await charge_llm(
                 session, user,
@@ -992,6 +1218,8 @@ async def chat_completions(
             if out_tokens is None:
                 out_tokens = approx_tokens_from_text(_extract_assistant_text(data))
 
+            _trace(f"[RUN][JSON] provider={provider} model={model} status={status} in_tokens={in_tokens} out_tokens={out_tokens} tried={tried}")
+
             cost = await charge_llm(
                 session, user,
                 model=requested_model or model or "auto",
@@ -1052,15 +1280,9 @@ async def audio_speech(
             continue
     raise HTTPException(status_code=503, detail=f"TTS providers unavailable. Last error: {last_error}")
 
-
-
 # -----------------------------------------------------------------------------
 # Speech-to-Text with priority failover
 # -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# Speech-to-Text with priority failover
-# -----------------------------------------------------------------------------
-
 @app.post("/v1/audio/transcriptions")
 async def audio_transcriptions(
     file: UploadFile = File(...),
@@ -1070,71 +1292,98 @@ async def audio_transcriptions(
 ):
     """
     Forward ASR to the first healthy provider according to RoutePref.
+
     Billing:
-      - input_count = approximate audio seconds (16 kHz * 16-bit mono heuristic)
-      - output_count = characters in transcript text returned by provider
+      Â• Preferred: bill by tokens if upstream returns usage (OpenAI/Gemini style).
+      Â• Fallback: bill by HOURS when usage is absent (Whisper-style endpoints).
     """
     routes = await _ordered_routes(session, RouteKind.ASR)
     blob = await file.read()
     filename = file.filename or "audio.wav"
     last_error = None
 
-    # Heuristic seconds (keeps existing behavior)
-    seconds = max(1, int(len(blob) / (16000 * 2)))  # 16kHz * 16-bit mono approx
+    # Duration heuristic (16 kHz * 16-bit mono) for fallback time billing
+    seconds = max(1, int(len(blob) / (16000 * 2)))  # ~1 sec per 32kB
 
     for r in routes:
         try:
             final_model = r.model or model
 
-            # Forward to provider
-            asr_json = await asr_forward(
-                session,
-                final_model,
-                blob,
-                filename,
-                provider=r.provider,
-            )
+            # Call upstream ASR
+            asr_json = await asr_forward(session, final_model, blob, filename, provider=r.provider)
 
-            # --- robust transcript extraction for character counting ---
+            # -------- Try token billing if provider gave usage --------
+            in_tok: int | None = None
+            out_tok: int | None = None
+            meta_usage: dict = {}
+
+            if isinstance(asr_json, dict):
+                u = asr_json.get("usage")
+                # OpenAI-like
+                if isinstance(u, dict) and ("prompt_tokens" in u or "completion_tokens" in u):
+                    in_tok = int(u.get("prompt_tokens") or 0)
+                    out_tok = int(u.get("completion_tokens") or 0)
+                    meta_usage = {"usage": u}
+                # Gemini-like (if you ever pass it through unchanged)
+                um = asr_json.get("usageMetadata")
+                if isinstance(um, dict) and (("promptTokenCount" in um) or ("candidatesTokenCount" in um)):
+                    in_tok = int(um.get("promptTokenCount") or 0)
+                    out_tok = int(um.get("candidatesTokenCount") or 0)
+                    meta_usage = {"usageMetadata": um}
+
+            if (in_tok is not None) or (out_tok is not None):
+                # Per-million token pricing via charge_llm
+                cost = await charge_llm(
+                    session,
+                    user,
+                    model=final_model,
+                    provider=r.provider,
+                    input_tokens=int(in_tok or 0),
+                    output_tokens=int(out_tok or 0),
+                )
+                await log_usage(
+                    session,
+                    user,
+                    model=final_model,
+                    provider=r.provider,
+                    model_type=ModelType.ASR,
+                    input_count=int(in_tok or 0),
+                    output_count=int(out_tok or 0),
+                    billed_credits=cost,
+                    response_meta=meta_usage,
+                )
+                await session.commit()
+                return JSONResponse(asr_json)
+
+            # -------- Fallback: hourly billing --------
+            # (We still record output characters for reference.)
             transcript = ""
             try:
                 if isinstance(asr_json, dict):
-                    # OpenAI / Whisper style
                     if isinstance(asr_json.get("text"), str):
                         transcript = asr_json["text"]
-                    # Some engines use "transcript"
                     elif isinstance(asr_json.get("transcript"), str):
                         transcript = asr_json["transcript"]
-                    # Segment-style payloads
                     elif isinstance(asr_json.get("segments"), list):
-                        transcript = " ".join(
-                            s.get("text", "")
-                            for s in asr_json["segments"]
-                            if isinstance(s, dict)
-                        )
-                    # Alt Deepgram/Google-like "results"
+                        transcript = " ".join(s.get("text", "") for s in asr_json["segments"] if isinstance(s, dict))
                     elif isinstance(asr_json.get("results"), list):
                         parts = []
                         for res in asr_json["results"]:
-                            if not isinstance(res, dict):
-                                continue
+                            if not isinstance(res, dict): continue
                             alts = res.get("alternatives") or []
                             if alts and isinstance(alts[0], dict):
                                 parts.append(alts[0].get("transcript", ""))
                         transcript = " ".join(parts)
             except Exception:
-                # Never fail billing on parsing
                 transcript = ""
-
             out_chars = len(transcript or "")
 
-            # Billing + usage log
             cost = await charge_asr(
                 session,
                 user,
                 model=final_model,
                 provider=r.provider,
-                seconds=seconds,
+                seconds=seconds,  # charge_asr now converts to hours internally
             )
             await log_usage(
                 session,
@@ -1142,23 +1391,16 @@ async def audio_transcriptions(
                 model=final_model,
                 provider=r.provider,
                 model_type=ModelType.ASR,
-                input_count=seconds,
+                input_count=seconds,  # stored raw seconds as input_count for diagnostics
                 output_count=out_chars,
                 billed_credits=cost,
             )
             await session.commit()
-
-            # Return upstream JSON 1:1
             return JSONResponse(asr_json)
 
         except Exception as e:
-            _errlog.info(
-                f"asr route failed provider={r.provider} model={r.model} err={e}"
-            )
+            _errlog.info(f"asr route failed provider={r.provider} model={r.model} err={e}")
             last_error = e
             continue
 
-    raise HTTPException(
-        status_code=503,
-        detail=f"ASR providers unavailable. Last error: {last_error}",
-    )
+    raise HTTPException(status_code=503, detail=f"ASR providers unavailable. Last error: {last_error}")

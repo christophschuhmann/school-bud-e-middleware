@@ -191,7 +191,6 @@ async def _pricing(session: AsyncSession, model: str, provider: str) -> ModelPri
     )
     return q.scalar_one_or_none()
 
-
 async def charge_llm(
     session: AsyncSession,
     user: User,
@@ -200,10 +199,21 @@ async def charge_llm(
     input_tokens: int,
     output_tokens: int,
 ) -> Decimal:
+    """
+    Rechnet Preise als 'pro 1.000.000 Tokens' ab.
+    Beispiel: p_input=0.15 => 0,15 Credits je 1M Input-Tokens.
+    """
     p = await _pricing(session, model, provider)
-    pi = Decimal(p.price_per_input_token or 0) * Decimal(input_tokens or 0) if p else Decimal(0)
-    po = Decimal(p.price_per_output_token or 0) * Decimal(output_tokens or 0) if p else Decimal(0)
-    cost = pi + po
+    if not p:
+        cost = Decimal(0)
+    else:
+        million = Decimal("1000000")
+        pi_per_million = Decimal(p.price_per_input_token or 0)   # jetzt als 'pro 1M' gespeichert
+        po_per_million = Decimal(p.price_per_output_token or 0)  # jetzt als 'pro 1M' gespeichert
+        pi = (pi_per_million * Decimal(input_tokens or 0)) / million
+        po = (po_per_million * Decimal(output_tokens or 0)) / million
+        cost = pi + po
+
     await debit_credits(session, user, cost, model, provider)
     return cost
 
@@ -228,7 +238,21 @@ async def charge_asr(
     provider: str,
     seconds: int,
 ) -> Decimal:
+    """
+    Bills ASR by HOUR (fallback mode), using the DB field 'price_per_second' as the hourly price.
+
+    Rationale:
+      - We keep the DB column/name and API surface unchanged for minimal edits.
+      - Admin UI shows 'price/hour'; the value users enter is stored in price_per_second.
+      - Here we convert seconds -> hours and multiply by the stored hourly price.
+    """
     p = await _pricing(session, model, provider)
-    cost = Decimal(p.price_per_second or 0) * Decimal(seconds or 0) if p else Decimal(0)
+    if not p:
+        cost = Decimal(0)
+    else:
+        hourly_price = Decimal(p.price_per_second or 0)  # interpret as "price/hour"
+        hours = Decimal(seconds or 0) / Decimal(3600)
+        cost = hourly_price * hours
+
     await debit_credits(session, user, cost, model, provider)
     return cost

@@ -233,14 +233,32 @@
         <button class="danger" onclick="bulkDelete('pricing')">Delete selected</button>
         <button class="secondary" onclick="reloadAll()">Reload</button>
       </div>
-      <details><summary>How Pricing works (examples)</summary>
+      <details><summary>How Pricing works (detailed)</summary>
         <div class="hint">
-          • For <b>LLM/VLM</b>, set <b>price/input_token</b> and <b>price/output_token</b>.<br/>
-          • For <b>TTS</b>, set <b>price/character</b>. For <b>ASR</b>, set <b>price/second</b>.<br/>
-          • Example (OpenAI-compat gpt-4o-mini): p_input=0.000001, p_output=0.000002<br/>
-          • Example (TTS tts-1): p_char=0.00002 · Example (ASR whisper-1): p_sec=0.0003
+          <b>Billing overview</b><br/>
+          • <b>LLM/VLM</b>: Enter <i>price per 1,000,000 input tokens</i> and <i>price per 1,000,000 output tokens</i>.
+            Example: <code>0.15</code> means 15¢ per 1M input tokens.<br/>
+          • <b>TTS</b>: Enter <i>price/character</i> (we bill on input characters).<br/>
+          • <b>ASR</b>: Two modes, chosen automatically per request:
+            <ul style="margin:6px 0 0 18px;padding:0">
+              <li><b>Token mode (preferred)</b> — If the ASR provider returns OpenAI-style usage
+                  (<code>usage.prompt_tokens</code> / <code>usage.completion_tokens</code>) or Gemini-style usage
+                  (<code>usageMetadata.promptTokenCount</code> / <code>candidatesTokenCount</code>), we bill by tokens using the
+                  same per-million token prices as LLM/VLM.</li>
+              <li><b>Time mode (fallback)</b> — If no token usage is returned (typical Whisper-style endpoints),
+                  we bill by <b>hours</b>. Enter your hourly price in the “price/hour” field below. The system
+                  estimates audio duration and charges: <code>hours = seconds / 3600</code>.</li>
+            </ul>
+          <b>Routing examples</b><br/>
+          • Gemini audio models that return usage ? <i>token mode</i>.<br/>
+          • Classic Whisper-compatible endpoints without usage ? <i>time mode</i> (hourly).<br/>
+          <b>Notes</b><br/>
+          • You may set both token and hourly prices for the same ASR model; the system will always prefer token billing when usage is present, and fall back to hourly otherwise.<br/>
+          • LLM/VLM token prices are always interpreted as <i>per 1,000,000 tokens</i> in this UI and backend.
         </div>
       </details>
+
+
     </div>
     <table id="tbl-pricing"><thead><tr>
       <th><input type="checkbox" onclick="toggleAll(this,'pricing')"></th>
@@ -301,67 +319,14 @@
     </tr></thead><tbody></tbody></table>
   </section>
 
-
   <!-- USAGE -->
   <section id="view-usage" class="card" style="display:none">
-  <h2>Usage</h2>
-
-  <div class="group">
-      <div class="row">
-      <select id="usage-proj" class="wide"></select>
-      <select id="usage-user" class="wide">
-          <option value="">(All users)</option>
-      </select>
-      <input id="usage-start" type="date">
-      <input id="usage-end" type="date">
-      <button class="secondary" onclick="quickWeek()">This Week</button>
-      <button class="secondary" onclick="quickMonth()">This Month</button>
-      <button class="secondary" onclick="quickLastMonth()">Last Month</button>
-      <button onclick="runUsageOverview()">Apply</button>
-      <span class="spacer"></span>
-      <button onclick="exportUsagePDF()">Export PDF</button>
-      <button class="secondary" onclick="exportAllProjectsZip()">Export all projects (ZIP)</button>
-      </div>
-      <div id="usage-project-meta" class="hint"></div>
-  </div>
-
-  <h3>Project Overview (by user & model type)</h3>
-  <table id="tbl-usageov">
-      <thead>
-      <tr>
-          <th>User</th>
-          <th colspan="3">LLM (in, out, credits)</th>
-          <th colspan="3">VLM (in, out, credits)</th>
-          <th colspan="3">TTS (in, out, credits)</th>
-          <th colspan="3">ASR (in, out, credits)</th>
-          <th>Total credits</th>
-      </tr>
-      </thead>
-      <tbody></tbody>
-      <tfoot><tr id="usageov-total-row"></tr></tfoot>
-  </table>
-
-  <details style="margin-top:12px">
-      <summary>Chronological connections (all rows in period)</summary>
-      <table id="tbl-connections" style="margin-top:8px">
-      <thead>
-          <tr>
-          <th>time</th><th>user</th><th>provider</th><th>model</th><th>type</th>
-          <th>input</th><th>output</th><th>billed</th>
-          </tr>
-      </thead>
-      <tbody></tbody>
-      </table>
-  </details>
-
-  <!-- keep the legacy quick log view below (unchanged) -->
-  <h3 style="margin-top:20px">Recent Usage (raw)</h3>
-  <table id="tbl-usage"><thead><tr>
+    <h2>Usage</h2>
+    <table id="tbl-usage"><thead><tr>
       <th>id</th><th>user_id</th><th>provider</th><th>model</th><th>type</th>
       <th>input</th><th>output</th><th>billed</th><th>created_at</th>
-  </tr></thead><tbody></tbody></table>
+    </tr></thead><tbody></tbody></table>
   </section>
-
 
   <!-- LEDGER -->
   <section id="view-ledger" class="card" style="display:none">
@@ -668,32 +633,52 @@ async function loadPricing(){
   const res = await api("/admin/pricing");
   const tb = q("#tbl-pricing tbody"); tb.innerHTML="";
   res.forEach(r=>{
+    // KEINE Skalierung mehr – Werte sind bereits 'pro 1M'
+    const pin  = r.p_input  ? parseFloat(r.p_input).toFixed(6)  : "0";
+    const pout = r.p_output ? parseFloat(r.p_output).toFixed(6) : "0";
+
     const tr=document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" data-id="${r.id}"></td>
       <td>${r.id}</td><td>${r.model}</td><td>${r.provider}</td><td>${r.model_type||""}</td>
-      <td class="mono">${r.p_input}</td><td class="mono">${r.p_output}</td>
+      <td class="mono">${pin}</td><td class="mono">${pout}</td>
       <td class="mono">${r.p_char}</td><td class="mono">${r.p_sec}</td>`;
+
     tr.addEventListener("click", e=>{
       if (e.target.tagName === "INPUT") return;
-      q("#pr-model").value = r.model; q("#pr-provider").value = r.provider;
-      q("#pr-type").value = r.model_type||"LLM"; q("#pr-pin").value = r.p_input;
-      q("#pr-pout").value = r.p_output; q("#pr-pchar").value = r.p_char; q("#pr-psec").value = r.p_sec;
+      q("#pr-model").value   = r.model;
+      q("#pr-provider").value= r.provider;
+      q("#pr-type").value    = r.model_type||"LLM";
+      // Inputs ebenfalls ohne Skalierung befüllen:
+      q("#pr-pin").value     = pin;
+      q("#pr-pout").value    = pout;
+      q("#pr-pchar").value   = r.p_char;
+      q("#pr-psec").value    = r.p_sec;
     });
     tb.appendChild(tr);
   });
 }
+
 async function upsertPricing(){
   const fd=new FormData();
   ["model","provider"].forEach(k=>fd.append(k, q("#pr-"+k).value));
   fd.append("model_type", q("#pr-type").value);
-  fd.append("price_per_input_token", q("#pr-pin").value||"0");
-  fd.append("price_per_output_token", q("#pr-pout").value||"0");
+
+  // KEINE Skalierung: Eingaben sind 'Preis pro 1.000.000 Tokens'
+  const pin  = parseFloat(q("#pr-pin").value || "0");
+  const pout = parseFloat(q("#pr-pout").value || "0");
+
+  fd.append("price_per_input_token",  isFinite(pin)  ? String(pin)  : "0");
+  fd.append("price_per_output_token", isFinite(pout) ? String(pout) : "0");
+
+  // TTS/ASR bleiben unverändert
   fd.append("price_per_character", q("#pr-pchar").value||"0");
-  fd.append("price_per_second", q("#pr-psec").value||"0");
+  fd.append("price_per_second",    q("#pr-psec").value||"0");
+
   const r = await api("/admin/pricing",{method:"POST", body:fd});
   toast("Pricing upserted."); loadPricing();
 }
+
 
 /* ---------- PROVIDERS ---------- */
 async function loadProviders(){
@@ -793,189 +778,6 @@ async function loadLedger(){
     // optional
   }
 }
-
-
-/* ---------- USAGE OVERVIEW (NEW) ---------- */
-
-async function loadProjectsForUsage(){
-  const projs = await api("/admin/projects");
-  const sel = q("#usage-proj");
-  sel.innerHTML = `<option value="">(Select a project)</option>` +
-    projs.map(p=>`<option value="${p.id}">${p.id} — ${p.name}</option>`).join("") +
-    `<option value="-1">Unassigned Users</option>`;   // NEW
-  sel.addEventListener("change", loadUsersForUsage);
-}
-
-async function loadUsersForUsage(){
-  const pid = q("#usage-proj").value;
-  const sel = q("#usage-user");
-  sel.innerHTML = `<option value="">(All users)</option>`;
-
-  // Project meta line
-  if (!pid){
-    q("#usage-project-meta").textContent = "";
-  } else if (pid === "-1") {
-    q("#usage-project-meta").innerHTML = `Project <b>Unassigned Users</b> • (no common/project pool)`;
-  } else {
-    const projs = await api("/admin/projects");
-    const p = projs.find(x => String(x.id) === String(pid));
-    if (p){
-      q("#usage-project-meta").innerHTML =
-        `Project <b>${p.name}</b> • Common pool: <b>${p.common_pool_balance}</b> • Remaining project pool: <b>${p.credits}</b>`;
-    }
-  }
-
-  // Users belonging to the current selection
-  let inSelection = [];
-  if (pid) {
-    if (pid === "-1") {
-      inSelection = await api(`/admin/users?unassigned=true`);
-    } else {
-      inSelection = await api(`/admin/users?project_id=${pid}`);
-    }
-  }
-
-  // All users (global)
-  const allUsers = await api(`/admin/users`);
-
-  // Build two optgroups
-  const og1 = document.createElement("optgroup");
-  og1.label = "Users in selection";
-  inSelection.forEach(u=>{
-    const opt = document.createElement("option");
-    opt.value = u.id; opt.textContent = `${u.id} — ${u.email}`;
-    og1.appendChild(opt);
-  });
-
-  const og2 = document.createElement("optgroup");
-  og2.label = "All users (global)";
-  allUsers.forEach(u=>{
-    const opt = document.createElement("option");
-    opt.value = u.id; opt.textContent = `${u.id} — ${u.email}`;
-    og2.appendChild(opt);
-  });
-
-  sel.appendChild(og1);
-  sel.appendChild(og2);
-}
-
-
-function _fmtDate(d){ return d.toISOString().slice(0,10); }
-function _mondayOf(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
-function _firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-function _firstOfNextMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 1); }
-
-function quickWeek(){
-  const now = new Date();
-  const s = _mondayOf(now);
-  const e = new Date(s); e.setDate(e.getDate()+7);
-  q("#usage-start").value = _fmtDate(s);
-  q("#usage-end").value = _fmtDate(e);
-}
-function quickMonth(){
-  const now = new Date();
-  const s = _firstOfMonth(now);
-  const e = _firstOfNextMonth(now);
-  q("#usage-start").value = _fmtDate(s);
-  q("#usage-end").value = _fmtDate(e);
-}
-function quickLastMonth(){
-  const now = new Date();
-  const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const s = _firstOfMonth(prev);
-  const e = _firstOfNextMonth(prev);
-  q("#usage-start").value = _fmtDate(s);
-  q("#usage-end").value = _fmtDate(e);
-}
-
-async function runUsageOverview(){
-  const pid = q("#usage-proj").value;
-  const uid = q("#usage-user").value;
-  const s = q("#usage-start").value;
-  const e = q("#usage-end").value;
-  if (!pid){ toast("Select a project first."); return; }
-
-  // Overview
-  const ov = await api(`/admin/usage/overview?project_id=${pid}${uid?`&user_id=${uid}`:""}${s?`&start=${s}`:""}${e?`&end=${e}`:""}`);
-  renderUsageOverview(ov);
-
-  // Connections
-  const cx = await api(`/admin/usage/connections?project_id=${pid}${uid?`&user_id=${uid}`:""}${s?`&start=${s}`:""}${e?`&end=${e}`:""}`);
-  renderConnections(cx.items);
-
-  // keep legacy mini-table fresh
-  loadUsage();
-}
-
-function renderUsageOverview(data){
-  const tb = q("#tbl-usageov tbody"); tb.innerHTML = "";
-  const tfoot = q("#usageov-total-row"); tfoot.innerHTML = "";
-  const types = ["LLM","VLM","TTS","ASR"];
-
-  (data.users||[]).forEach(u=>{
-    const tr = document.createElement("tr");
-    const cells = [];
-    cells.push(u.email || `user-${u.user_id}`);
-    types.forEach(t=>{
-      const bt = (u.by_type||{})[t] || {input:0,output:0,credits:"0"};
-      cells.push(bt.input);
-      cells.push(bt.output);
-      cells.push(bt.credits);
-    });
-    cells.push(u.total_credits);
-    tr.innerHTML = cells.map(c=>`<td>${c}</td>`).join("");
-    tb.appendChild(tr);
-  });
-
-  // totals row
-  const totals = (data.totals||{}).by_type || {};
-  const totalCells = [];
-  totalCells.push("<b>Totals</b>");
-  types.forEach(t=>{
-    const bt = totals[t] || {input:0,output:0,credits:"0"};
-    totalCells.push(`<b>${bt.input}</b>`);
-    totalCells.push(`<b>${bt.output}</b>`);
-    totalCells.push(`<b>${bt.credits}</b>`);
-  });
-  totalCells.push(`<b>${(data.totals||{}).grand_total_credits || "0"}</b>`);
-  tfoot.innerHTML = totalCells.map(c=>`<td>${c}</td>`).join("");
-}
-
-function renderConnections(items){
-  const tb = q("#tbl-connections tbody"); tb.innerHTML = "";
-  items.forEach(r=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML = `<td>${r.created_at||""}</td><td>${r.email||("user-"+r.user_id)}</td>
-      <td>${r.provider}</td><td>${r.model}</td><td>${r.model_type||""}</td>
-      <td>${r.input}</td><td>${r.output}</td><td>${r.billed}</td>`;
-    tb.appendChild(tr);
-  });
-}
-
-function exportUsagePDF(){
-  const pid = q("#usage-proj").value;
-  if (!pid){ toast("Select a project first."); return; }
-  const uid = q("#usage-user").value;
-  const s = q("#usage-start").value;
-  const e = q("#usage-end").value;
-  const url = `/admin/usage/overview/pdf?project_id=${pid}${uid?`&user_id=${uid}`:""}${s?`&start=${s}`:""}${e?`&end=${e}`:""}`;
-  // trigger download in a new tab (works for both PDF and HTML fallback)
-  window.open(url, "_blank");
-}
-
-function exportAllProjectsZip(){
-  const s = q("#usage-start").value;
-  const e = q("#usage-end").value;
-  const url = `/admin/usage/overview/bulk_zip${s?`?start=${s}`:""}${s&&e?`&end=${e}`:(!s&&e?`?end=${e}`:"")}`;
-  window.open(url, "_blank");
-}
-
-// init on first load of Usage tab
-(async function initUsageTab(){
-  await loadProjectsForUsage();
-  quickMonth();
-})();
-
 
 /* ---------- MAINTENANCE ---------- */
 function downloadSqlite(){
