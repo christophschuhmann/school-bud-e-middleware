@@ -211,6 +211,8 @@ app.add_middleware(
 # Static Admin UI (tabs, backup/restore, etc.)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+
 # -----------------------------------------------------------------------------
 # Provider failure logging (rotating)
 # -----------------------------------------------------------------------------
@@ -415,6 +417,104 @@ async def _sse_passthrough_and_bill(
             _trace("[CLIENT][SSE >> MINI] [DONE]")
             yield enc_done
             return
+
+
+# ===== Admin auth (password + cookie session + 3s cooldown) =====
+import time, secrets, json, pathlib, bcrypt
+from fastapi import Request, Response, Depends, HTTPException, status
+from fastapi.routing import APIRouter
+from typing import Dict
+
+APP_DIR = pathlib.Path(__file__).resolve().parent
+ADMIN_CFG_FILE = APP_DIR / "admin-website-config.json"
+
+# in-memory state
+_failed_try_at: Dict[str, float] = {}    # ip -> last_attempt_ts
+_sessions: Dict[str, float] = {}         # token -> expires_ts
+SESSION_TTL = 3600 * 8                   # 8 hours
+COOLDOWN_SEC = 3.0
+
+def _load_pw_hash() -> str:
+    try:
+        cfg = json.loads(ADMIN_CFG_FILE.read_text(encoding="utf-8"))
+        return cfg.get("password_bcrypt") or ""
+    except Exception:
+        return ""
+
+def _issue_session() -> str:
+    tok = secrets.token_urlsafe(32)
+    _sessions[tok] = time.time() + SESSION_TTL
+    return tok
+
+def _validate_session(req: Request) -> bool:
+    tok = req.cookies.get("admin_session") or ""
+    exp = _sessions.get(tok)
+    if not exp: return False
+    if exp < time.time():
+        _sessions.pop(tok, None)
+        return False
+    # slide
+    _sessions[tok] = time.time() + SESSION_TTL
+    return True
+
+async def require_admin(req: Request):
+    path = req.url.path
+    # allow unauth'd for login endpoints:
+    if path in ("/admin/login", "/admin/logout", "/admin/auth-status"):
+        return
+    if not _validate_session(req):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="auth required")
+
+auth_router = APIRouter(prefix="/admin", tags=["admin-auth"])
+
+@auth_router.get("/auth-status")
+def auth_status(req: Request):
+    return {"authenticated": _validate_session(req)}
+
+@auth_router.post("/login")
+async def admin_login(req: Request, resp: Response, payload: dict):
+    # 3s cooldown per IP
+    ip = req.client.host if req.client else "unknown"
+    last = _failed_try_at.get(ip, 0.0)
+    now = time.time()
+    if now - last < COOLDOWN_SEC:
+        wait = COOLDOWN_SEC - (now - last)
+        raise HTTPException(status_code=429, detail=f"cooldown: try again in {wait:.1f}s")
+
+    pw = (payload or {}).get("password") or ""
+    pw_hash = _load_pw_hash()
+    ok = bool(pw) and bool(pw_hash) and bcrypt.checkpw(pw.encode("utf-8"), pw_hash.encode("utf-8"))
+    if not ok:
+        _failed_try_at[ip] = now
+        raise HTTPException(status_code=401, detail="invalid password; cooldown 3s")
+
+    token = _issue_session()
+    # Set secure cookie
+    resp.set_cookie(
+        "admin_session", token,
+        httponly=True, samesite="strict",
+        secure=False,  # set True if you serve over https
+        max_age=SESSION_TTL
+    )
+    return {"ok": True}
+
+@auth_router.post("/logout")
+async def admin_logout(resp: Response, req: Request):
+    tok = req.cookies.get("admin_session")
+    if tok: _sessions.pop(tok, None)
+    resp.delete_cookie("admin_session")
+    return {"ok": True}
+
+# Register auth router and put "require_admin" on the whole /admin router group
+app.include_router(auth_router)
+
+# If you already do: app.include_router(admin_router)
+# add the dependency so every /admin/* handler requires a valid session:
+from admin import router as admin_router   # you already have this in serve.py; keep it in main.py too
+admin_router.dependencies = admin_router.dependencies or []
+admin_router.dependencies.append(Depends(require_admin))
+app.include_router(admin_router)
+
 
 
 # A tiny "billing context" for the running request (used only inside request task)

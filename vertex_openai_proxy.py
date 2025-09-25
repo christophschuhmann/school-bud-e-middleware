@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 """
-Vertex AI (Gemini) ? OpenAI-compatible proxy server
+Vertex AI (Gemini) ↔ OpenAI-compatible proxy server
 - /v1/audio/transcriptions  (Whisper-compatible)
 - /v1/chat/completions      (OpenAI Chat Completions; supports text + base64 images/PDFs)
 - /v1/responses             (minimal OpenAI Responses compatibility)
 - /v1/models                (tiny models listing for clients)
 - /admin/settings (GET/POST) to view/change default region/model/project/SA JSON
 
-Updates in this version:
-- Standard OpenAI usage fields are returned in non-streaming responses (unchanged behavior),
-  and now also included in the **final streaming chunk** (OpenAI-style) before [DONE].
-- For Vertex streaming, we pull `usage_metadata` from the stream object after iteration.
-  If unavailable, we approximate via `count_tokens()` as a fallback.
-- NEW: /v1/audio/transcriptions returns OpenAI-style `usage` in JSON responses and
-  always sets `X-Usage-*` headers for all formats (text/srt/vtt/json).
+NEW (TTS):
+- /v1/audio/speech          → Google Cloud Text-to-Speech (incl. Chirp 3 HD), returns audio (MP3/WAV/OGG)
+- /v1/audio/speech/voices   → List available voices (cached)
+- Auto-language/auto-voice (optional): if no voice_name/language_code, detect from text (langdetect)
 """
 
 import os, base64, mimetypes, uuid, time, json, threading
@@ -127,6 +124,14 @@ def _ensure(pkg: str, mod: Optional[str] = None):
 
 _ensure("google-cloud-aiplatform", "google.cloud.aiplatform")
 
+# --- TTS deps (NEW) ---
+_ensure("google-cloud-texttospeech", "google.cloud.texttospeech")
+_ensure("langdetect", "langdetect")
+from google.cloud import texttospeech_v1 as tts
+from langdetect import detect, DetectorFactory
+DetectorFactory.seed = 42
+# ----------------------
+
 # Vertex SDK
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part
@@ -135,7 +140,7 @@ from vertexai.generative_models import GenerativeModel, Part
 # App setup
 # ===========
 
-app = FastAPI(title="Vertex Gemini ? OpenAI-compatible proxy")
+app = FastAPI(title="Vertex Gemini ↔ OpenAI-compatible proxy")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
@@ -590,6 +595,7 @@ def set_settings(body: Dict[str, Any] = Body(...)):
                 changed = True
         if changed:
             _clear_model_cache()
+            _clear_voices_cache()  # TTS cache reset if settings change
     return {"ok": True, "changed": changed, "state": dict(STATE)}
 
 # ============
@@ -600,8 +606,226 @@ def set_settings(body: Dict[str, Any] = Body(...)):
 def root():
     return {
         "ok": True,
-        "msg": "Vertex Gemini ? OpenAI proxy is up.",
+        "msg": "Vertex Gemini ↔ OpenAI proxy is up.",
         "region": STATE["region"],
         "model": STATE["model"],
         "project_id": STATE["project_id"],
     }
+
+# =========================
+# TTS (Google Cloud TTS)  |
+# =========================
+
+# --- small voice cache (per settings) ---
+_VOICES_CACHE: Dict[str, Dict[str, Any]] = {}
+_VOICES_CACHE_TTL_SEC = 1800  # 30 min
+
+def _voices_cache_key() -> str:
+    return f"{STATE['region']}|{STATE['project_id']}|{STATE['sa_json']}"
+
+def _clear_voices_cache():
+    _VOICES_CACHE.clear()
+
+def _tts_endpoint_for_region() -> str:
+    # Region-gerechte Endpoints (ggf. global fallback)
+    region = (STATE["region"] or "").lower()
+    if region.startswith("europe-"):
+        return "eu-texttospeech.googleapis.com"
+    if region.startswith("us-"):
+        return "us-texttospeech.googleapis.com"
+    return "texttospeech.googleapis.com"  # global
+
+def _get_tts_client():
+    from google.oauth2 import service_account
+    creds = None
+    if STATE["sa_json"] and os.path.isfile(STATE["sa_json"]):
+        creds = service_account.Credentials.from_service_account_file(
+            STATE["sa_json"], scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+    endpoint = _tts_endpoint_for_region()
+    return tts.TextToSpeechClient(client_options={"api_endpoint": endpoint}, credentials=creds)
+
+def _list_voices(language_code: Optional[str] = None) -> List[tts.Voice]:
+    key = _voices_cache_key()
+    now = time.time()
+    entry = _VOICES_CACHE.get(key)
+    if entry and now - entry["ts"] < _VOICES_CACHE_TTL_SEC:
+        voices = entry["voices"]
+    else:
+        client = _get_tts_client()
+        voices = list(client.list_voices().voices)
+        _VOICES_CACHE[key] = {"ts": now, "voices": voices}
+
+    if language_code:
+        lc = language_code.lower()
+        v = [v for v in voices if any(l.lower().startswith(lc) for l in v.language_codes)]
+        if v:
+            return v
+    return voices
+
+def _detect_language_code(text: str) -> str:
+    try:
+        lang = detect(text or "")
+    except Exception:
+        lang = "en"
+    mapping = {
+        "en": "en-US", "de": "de-DE", "fr": "fr-FR", "es": "es-ES", "it": "it-IT",
+        "pt": "pt-BR", "nl": "nl-NL", "pl": "pl-PL", "ru": "ru-RU",
+        "sv": "sv-SE", "da": "da-DK", "fi": "fi-FI", "no": "nb-NO",
+        "tr": "tr-TR", "ja": "ja-JP", "ko": "ko-KR",
+        "zh-cn": "cmn-CN", "zh-tw": "cmn-TW",
+        "ar": "ar-XA", "hi": "hi-IN",
+    }
+    return mapping.get(lang.lower(), "en-US")
+
+def _choose_voice(language_code: str, prefer: str = "chirp") -> Optional[str]:
+    voices = _list_voices(language_code)
+    names = [v.name for v in voices]
+    # Preferenzen: Chirp 3 HD → Neural2 → Standard
+    if prefer == "chirp":
+        cand = [n for n in names if "Chirp" in n and "HD" in n]
+        if cand: return sorted(cand)[0]
+    if prefer in {"neural","chirp"}:
+        cand = [n for n in names if "Neural2" in n]
+        if cand: return sorted(cand)[0]
+    cand = [n for n in names if "Standard" in n]
+    if cand: return sorted(cand)[0]
+    return names[0] if names else None
+
+def _audio_encoding_and_mime(fmt: str) -> Tuple[tts.AudioEncoding, str, str]:
+    fmt = (fmt or "mp3").lower()
+    enc_map = {
+        "mp3": tts.AudioEncoding.MP3,
+        "wav": tts.AudioEncoding.LINEAR16,
+        "linear16": tts.AudioEncoding.LINEAR16,
+        "ogg": tts.AudioEncoding.OGG_OPUS,
+        "opus": tts.AudioEncoding.OGG_OPUS,
+        "mulaw": tts.AudioEncoding.MULAW,
+        "alaw": tts.AudioEncoding.ALAW,
+    }
+    audio_encoding = enc_map.get(fmt, tts.AudioEncoding.MP3)
+    mime_map = {
+        tts.AudioEncoding.MP3: "audio/mpeg",
+        tts.AudioEncoding.LINEAR16: "audio/wav",
+        tts.AudioEncoding.OGG_OPUS: "audio/ogg",
+        tts.AudioEncoding.MULAW: "audio/basic",
+        tts.AudioEncoding.ALAW: "audio/basic",
+    }
+    mime = mime_map[audio_encoding]
+    ext = "mp3" if audio_encoding == tts.AudioEncoding.MP3 else ("wav" if audio_encoding == tts.AudioEncoding.LINEAR16 else "audio")
+    return audio_encoding, mime, ext
+
+@app.get("/v1/audio/speech/voices")
+def list_voices_api(language_code: Optional[str] = None):
+    """
+    Optional helper to inspect available voices.
+    GET /v1/audio/speech/voices?language_code=de-DE
+    """
+    try:
+        voices = _list_voices(language_code)
+        data = []
+        for v in voices:
+            data.append({
+                "name": v.name,
+                "language_codes": list(v.language_codes),
+                "ssml_gender": tts.SsmlVoiceGender(v.ssml_gender).name if v.ssml_gender is not None else "SSML_VOICE_GENDER_UNSPECIFIED",
+                "natural_sample_rate_hertz": getattr(v, "natural_sample_rate_hertz", None),
+            })
+        return {"voices": data, "count": len(data)}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"TTS voices error: {e}")
+
+@app.post("/v1/audio/speech")
+def tts_synthesize(body: Dict[str, Any] = Body(...)):
+    """
+    Synthesize speech via Google Cloud Text-to-Speech.
+
+    JSON body:
+    {
+      "text": "Hello world",             # or "ssml": "<speak>...</speak>" (ignored by Chirp 3 HD)
+      "ssml": "<speak>...</speak>",
+      "voice_name": "en-US-Chirp-HD-F",  # optional; if omitted -> auto language + auto voice
+      "language_code": "en-US",          # optional; if omitted -> auto detect from text/ssml
+      "prefer": "chirp",                 # "chirp" | "neural" | "standard" (default: chirp)
+      "audio_format": "mp3",             # mp3 | wav | ogg | opus | mulaw | alaw
+      "speaking_rate": 1.0,              # ignored for Chirp
+      "pitch": 0.0,                      # ignored for Chirp
+      "effects_profile_id": []           # optional
+    }
+
+    Returns: binary audio with proper Content-Type, or JSON error on failure.
+    """
+    try:
+        text = (body.get("text") or "").strip()
+        ssml = (body.get("ssml") or "").strip()
+        if not text and not ssml:
+            raise HTTPException(status_code=400, detail="Provide 'text' or 'ssml'.")
+
+        prefer = (body.get("prefer") or "chirp").lower().strip()
+        if prefer not in {"chirp", "neural", "standard"}:
+            prefer = "chirp"
+
+        voice_name = body.get("voice_name")
+        language_code = body.get("language_code")
+        audio_format = (body.get("audio_format") or "mp3").lower()
+
+        # Auto language from content if not provided
+        if not language_code:
+            sample = ssml if ssml else text
+            language_code = _detect_language_code(sample)
+
+        # Auto voice selection if not provided
+        if not voice_name:
+            if prefer == "neural":
+                voice_name = _choose_voice(language_code, prefer="neural") or _choose_voice(language_code, prefer="chirp")
+            elif prefer == "standard":
+                voice_name = _choose_voice(language_code, prefer="standard")
+            else:
+                voice_name = _choose_voice(language_code, prefer="chirp") or _choose_voice(language_code, prefer="neural")
+        if not voice_name:
+            raise HTTPException(status_code=404, detail=f"No voice found for language_code={language_code}")
+
+        audio_encoding, mime, ext = _audio_encoding_and_mime(audio_format)
+
+        # Build TTS request
+        if ssml:
+            synthesis_input = tts.SynthesisInput(ssml=ssml)
+        else:
+            synthesis_input = tts.SynthesisInput(text=text)
+
+        voice_params = tts.VoiceSelectionParams(language_code=language_code, name=voice_name)
+
+        cfg_kwargs = {"audio_encoding": audio_encoding}
+        # Chirp 3 HD: speaking_rate/pitch werden ignoriert – setze sie nur bei Nicht-Chirp
+        if not ("Chirp" in voice_name and "HD" in voice_name):
+            if "speaking_rate" in body and body["speaking_rate"] is not None:
+                cfg_kwargs["speaking_rate"] = float(body["speaking_rate"])
+            if "pitch" in body and body["pitch"] is not None:
+                cfg_kwargs["pitch"] = float(body["pitch"])
+        if "effects_profile_id" in body and body["effects_profile_id"]:
+            cfg_kwargs["effects_profile_id"] = list(body["effects_profile_id"])
+
+        audio_config = tts.AudioConfig(**cfg_kwargs)
+
+        client = _get_tts_client()
+        resp = client.synthesize_speech(input=synthesis_input, voice=voice_params, audio_config=audio_config)
+
+        data = resp.audio_content or b""
+        if not data:
+            # Explizit JSON-Fehler zurückgeben, damit niemand ein leeres „MP3“ speichert
+            raise HTTPException(status_code=502, detail="Empty audio from Text-to-Speech.")
+
+        headers = {
+            "Content-Type": mime,
+            "Content-Disposition": f'inline; filename="speech.{ext}"',
+            "X-TTS-Voice-Name": voice_name,
+            "X-TTS-Language-Code": language_code,
+            "X-TTS-Endpoint": _tts_endpoint_for_region(),
+        }
+        return Response(content=data, media_type=mime, headers=headers)
+
+    except HTTPException:
+        # Immer JSON bei Fehlern (keine Binärantwort → kein „defektes MP3“)
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"TTS error: {e}")

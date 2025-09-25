@@ -15,5 +15,5 @@ def fix_encoding(file_path):
         file.writelines(lines)
 
 # Beispiel fÃ¼r die Verwendung
-file_path ='main.py' #"musicanno.py" #   # Pfad zur Datei
+file_path ='serve+.py' #"musicanno.py" #   # Pfad zur Datei
 fix_encoding(file_path)

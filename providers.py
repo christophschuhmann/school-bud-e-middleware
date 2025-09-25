@@ -54,9 +54,8 @@ async def gemini_stream(session: AsyncSession, contents: list, system_instructio
             if line and line.startswith("data: "):
                 yield line[6:]
 
-
-async def tts_forward(session: AsyncSession, model:str, text:str, provider: str) -> bytes:
-    # Get the provider's base_url and api_key from the database
+async def tts_forward(session: AsyncSession, model: str, text: str, provider: str) -> bytes:
+    # Get the provider's base_url and api_key from the database / .env
     prov_details = await _get_provider(session, provider)
     base_url = prov_details.get("base_url")
     api_key = prov_details.get("api_key")
@@ -64,45 +63,103 @@ async def tts_forward(session: AsyncSession, model:str, text:str, provider: str)
     if not base_url or not api_key:
         raise ValueError(f"Provider '{provider}' is missing base_url or api_key in configuration.")
 
-    # --- START OF NEW LOGIC ---
-    # We choose the payload format based on the provider's name.
-    # It's a good practice to name your Fish Audio provider "tts_fish_audio" or similar in the admin panel.
+    # --- helpers -------------------------------------------------------------
+    def _parse_model_options(raw: str) -> dict:
+        """
+        Allow passing options via the Routes 'model' column, e.g.:
+          - "auto"
+          - "en-US-Chirp3-HD-Achernar"
+          - "voice=en-US-Wavenet-D"
+          - "voice=de-DE-Chirp3-HD-Achernar;lang=de-DE;format=mp3"
+        Returns a dict possibly containing: voice_name, language_code, audio_format
+        """
+        out = {}
+        if not raw:
+            return out
+        s = raw.strip()
+        if s.lower() == "auto":
+            return out
+        # key=value;key=value ... OR just a bare voice name
+        if ("=" not in s) and (";" not in s):
+            out["voice_name"] = s
+            return out
+        for part in s.split(";"):
+            if not part.strip():
+                continue
+            if "=" in part:
+                k, v = part.split("=", 1)
+                k = k.strip().lower()
+                v = v.strip()
+                if k in ("voice", "voice_name"):
+                    out["voice_name"] = v
+                elif k in ("lang", "language", "language_code"):
+                    out["language_code"] = v
+                elif k in ("format", "audio_format"):
+                    out["audio_format"] = v
+        return out
+
+    clean_base = base_url.rstrip("/")
+
+    # ---------------- FISH AUDIO (unchanged) --------------------------------
     if "fish.audio" in base_url or "fish" in provider.lower():
-        # This is the payload format that Fish Audio expects
         payload = {
             "text": text,
-            "reference_id": model,
+            "reference_id": model,   # you already use model to carry reference_id
             "normalize": True,
             "format": "mp3",
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        # The URL for Fish is just the base URL, not base_url + /audio/speech
-        final_url = base_url
+        final_url = clean_base  # Fish uses the base URL directly
+
+    # ---------------- VERTEX PROXY (new branch) -----------------------------
+    # Detect by provider name OR by your proxy base_url (e.g. http://localhost:8001/v1)
+    elif "vertex" in provider.lower() or "localhost:8001" in clean_base:
+        # --- Vertex proxy expects: {"text", optional "voice_name", optional "language_code", "audio_format"} ---
+        opts = _parse_model_options(model or "")
+
+        voice_name = opts.get("voice_name")
+        language_code = opts.get("language_code")  # user may omit this – we’ll infer from voice_name
+
+        # If user passed a full Google voice name (e.g., "de-DE-Chirp3-HD-Achernar"
+        # or "en-US-Wavenet-D") but NO language_code, auto-derive it from the prefix.
+        if voice_name and not language_code:
+            import re
+            m = re.match(r"^([a-z]{2,3}-[A-Z]{2})-", voice_name)
+            if m:
+                language_code = m.group(1)
+
+        payload = {
+            "text": text,
+            **({"voice_name": voice_name} if voice_name else {}),
+            **({"language_code": language_code} if language_code else {}),  # leave out ? proxy will detect from text
+            "audio_format": opts.get("audio_format", "mp3"),
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        final_url = f"{clean_base}/audio/speech"
+
+
+    # ---------------- DEFAULT (OpenAI-compatible) ---------------------------
     else:
-        # This is the standard OpenAI-compatible format that your other providers (and the middleware itself) use.
         payload = {
             "model": model,
             "input": text,
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        # For OpenAI-compatible providers, we append the standard path
-        final_url = f"{base_url.rstrip('/')}/audio/speech"
-    # --- END OF NEW LOGIC ---
+        final_url = f"{clean_base}/audio/speech"
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        # Note we are now sending a JSON payload for both cases
         r = await client.post(final_url, headers=headers, json=payload)
-        
-        # This will raise an error if the status is 4xx or 5xx, which is what we want.
         r.raise_for_status()
         return r.content
-
 
 async def asr_forward(session: AsyncSession, model:str, file_bytes: bytes, filename: str, provider: str) -> dict:
     prov = await _get_provider(session, provider)
