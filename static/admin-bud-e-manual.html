@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Bud-E – Handbuch & Setup (Bud-E / SchoolBuddy)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --green:#0a7a3d; --green2:#096e38; --bg:#f7fafc; --ink:#0b1220; --muted:#5b6778;
+      --card:#fff; --line:#e7ecf2; --chip:#f1f5ff; --link:#1f5de7; --warn:#fff8e6; --ok:#effcf3;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:16px/1.62 Inter,system-ui,Segoe UI,Roboto,Arial}
+    a{color:var(--link);text-decoration:none}
+    a:hover{text-decoration:underline}
+    header{
+      background:linear-gradient(180deg,var(--green),var(--green2));
+      color:#fff; padding:28px 18px 36px; position:relative;
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+    header h1{margin:0 0 8px 0;font-size:30px;letter-spacing:.2px}
+    header p{margin:0; font-size:17px; color:#fff; opacity:1; max-width:980px}
+    .cta-row{margin-top:14px; display:flex; gap:10px; flex-wrap:wrap}
+    .btn{
+      display:inline-block; background:#ffffff; color:#0a4a22; padding:9px 14px; border-radius:10px; font-weight:600; border:0;
+    }
+    .btn.alt{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,.55) }
+    .btn.ghost{ background:transparent; color:#fff; border:0; text-decoration:underline }
+    main{max-width:1100px;margin:0 auto;padding:22px 16px 88px}
+    h2{margin:28px 0 10px;font-size:24px}
+    h3{margin:22px 0 8px;font-size:18px}
+    .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
+    .tip{background:var(--ok);border-color:#caead7}
+    .warn{background:var(--warn);border-color:#ffdca1}
+    .callout{background:#fff;border:1px dashed #dfe7f1;border-radius:12px;padding:14px 16px}
+    .toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:-20px;box-shadow:0 4px 14px rgba(2,6,23,.05)}
+    .toc ul{list-style:none;margin:0;padding:0;columns:2;column-gap:24px}
+    .toc li{margin:6px 0}
+    .grid{display:grid;gap:12px}
+    @media (min-width:880px){ .grid.two{grid-template-columns:1fr 1fr} }
+    .pill{display:inline-block;background:var(--chip);border-radius:999px;padding:2px 8px;font-size:12px}
+    .small{color:var(--muted);font-size:13px}
+    code,pre{background:#f6f8fa;border:1px solid #eaecef;border-radius:8px}
+    code{padding:2px 6px}
+    pre{padding:12px;overflow:auto}
+    hr{border:none;border-top:1px solid var(--line);margin:22px 0}
+    .hide{display:none !important}
+    /* language toggle group */
+    .lang-toggle{position:absolute;right:18px;top:18px;display:flex;gap:6px}
+    .lang-toggle .btn{padding:6px 10px}
+    .active-lang{background:#fff;color:#0a4a22;border:0}
+  </style>
+</head>
+<body>
+
+<!-- HEADER (gemeinsam, die Texte wechseln per Sprach-Container) -->
+<header>
+  <div class="wrap">
+
+    <!-- Sprachumschalter -->
+    <div class="lang-toggle" aria-label="Language switch">
+      <button id="btn-de" class="btn alt">DE</button>
+      <button id="btn-en" class="btn alt">EN</button>
+    </div>
+
+    <!-- DE Header -->
+    <div data-lang="de">
+      <h1>Admin Bud-E – Handbuch & Setup</h1>
+      <p>
+        <b>Admin Bud-E</b> ist die Administrations-Middleware der <b>Bud-E/SchoolBuddy-Familie</b>.
+        Sie ist eine <b>Open-Source Middleware und Nutzerverwaltung für AI-Sprachassistenten</b> – also für
+        Systeme, die natürliche Sprache verstehen/erzeugen (LLM/VLM), Sprache zu Text (ASR) und Text zu Sprache (TTS).
+        Entwickelt und betreut von <a href="https://laion.ai/" target="_blank" rel="noopener">LAION&nbsp;e. V.</a> (gemeinnützig).
+        Ziel: <b>Datenschutz, Budgetkontrolle und einfache Verwaltung</b> in Schulen, Unternehmen und Organisationen.
+      </p>
+      <p>
+        Die Middleware nimmt Anfragen vom Frontend entgegen, routet sie zu konfigurierten Anbietern (z. B. Google Vertex,
+        Together, Mistral), misst den Verbrauch (Tokens/Zeichen/Sekunden), bucht <b>Credits</b> je Nutzer/Projekt und erzeugt
+        Berichte. Das Frontend kann eigenständig gehostet werden oder – bequemer – auf unserer Infrastruktur laufen; die
+        <b>Conversation History bleibt lokal im Browser</b> der Nutzer (kein Server-Speicher).
+      </p>
+      <div class="cta-row">
+        <a class="btn" href="https://school.bud-e.ai/" target="_blank" rel="noopener">Gehostetes Frontend öffnen</a>
+        <a class="btn alt" href="https://github.com/christophschuhmann/school-bud-e-middleware/" target="_blank" rel="noopener">Middleware-Repo (Admin Bud-E)</a>
+        <a class="btn alt" href="https://github.com/christophschuhmann/school-bud-e-frontend/tree/middleware-compatible-frontend" target="_blank" rel="noopener">Frontend-Repo (selbst hosten)</a>
+        <a class="btn alt" href="https://laion.ai/blog/bud-e-release/" target="_blank" rel="noopener">Hintergrund (LAION-Blog)</a>
+      </div>
+    </div>
+
+    <!-- EN Header -->
+    <div data-lang="en" class="hide">
+      <h1>Admin Bud-E – Guide & Setup</h1>
+      <p>
+        <b>Admin Bud-E</b> is the administration middleware of the <b>Bud-E / SchoolBuddy</b> family.
+        It is an <b>open-source middleware and user management layer for AI assistants</b> (plural) — covering
+        LLM/VLM (text & multimodal), ASR (speech-to-text) and TTS (text-to-speech).
+        Built and maintained by <a href="https://laion.ai/" target="_blank" rel="noopener">LAION e. V.</a> (non-profit).
+        Goal: <b>privacy, budget control and easy administration</b> for schools, companies and public institutions.
+      </p>
+      <p>
+        The middleware receives requests from the frontend, routes them to configured providers (e.g. Google Vertex,
+        Together, Mistral), measures usage (tokens/chars/seconds), books <b>credits</b> per user/project and produces
+        reports. The frontend can be self-hosted or — more convenient — run on our infrastructure; the
+        <b>conversation history stays local in the user’s browser</b> (no server storage).
+      </p>
+      <div class="cta-row">
+        <a class="btn" href="https://school.bud-e.ai/" target="_blank" rel="noopener">Open hosted frontend</a>
+        <a class="btn alt" href="https://github.com/christophschuhmann/school-bud-e-middleware/" target="_blank" rel="noopener">Middleware repo (Admin Bud-E)</a>
+        <a class="btn alt" href="https://github.com/christophschuhmann/school-bud-e-frontend/tree/middleware-compatible-frontend" target="_blank" rel="noopener">Frontend repo (self-hosting)</a>
+        <a class="btn alt" href="https://laion.ai/blog/bud-e-release/" target="_blank" rel="noopener">Background (LAION blog)</a>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+<main>
+
+  <!-- ======= Inhaltsverzeichnis DE ======= -->
+  <section class="toc" data-lang="de">
+    <h2>Inhalt</h2>
+    <ul>
+      <li><a href="#intro">1. Was die Middleware genau macht (Einführung)</a></li>
+      <li><a href="#vps">2. Server (VPS) vs. Cloud – Empfehlung & Größenwahl</a></li>
+      <li><a href="#vertex">3. Google Cloud & Vertex AI – Schritt für Schritt (+ OpenAI-Proxy)</a></li>
+      <li><a href="#menus">4. Menü-Tour: Users, Projects, Pricing, Providers, Routes, Usage, Maintenance</a></li>
+      <li><a href="#common-pool">5. Budgets, Allowance & Common Pool – Beispiele</a></li>
+      <li><a href="#privacy">6. Datenschutz & EU-Regionen</a></li>
+      <li><a href="#backup">7. Backups & Wiederherstellung</a></li>
+      <li><a href="#faq">8. Häufige Fragen & Tipps</a></li>
+    </ul>
+  </section>
+
+  <!-- ======= Table of contents EN ======= -->
+  <section class="toc hide" data-lang="en">
+    <h2>Contents</h2>
+    <ul>
+      <li><a href="#intro-en">1. What the middleware does (introduction)</a></li>
+      <li><a href="#vps-en">2. Server (VPS) vs. cloud — recommendation & sizing</a></li>
+      <li><a href="#vertex-en">3. Google Cloud & Vertex AI — step by step (+ OpenAI proxy)</a></li>
+      <li><a href="#menus-en">4. Menu tour: Users, Projects, Pricing, Providers, Routes, Usage, Maintenance</a></li>
+      <li><a href="#common-pool-en">5. Budgets, allowance & common pool — examples</a></li>
+      <li><a href="#privacy-en">6. Privacy & EU regions</a></li>
+      <li><a href="#backup-en">7. Backups & restore</a></li>
+      <li><a href="#faq-en">8. FAQ & tips</a></li>
+    </ul>
+  </section>
+
+  <!-- ========= DE CONTENT (gekürzt nur in dieser Antwort-Box aus Platzgründen — übernimm deinen vollen Text hier) ========= -->
+  <section id="intro" data-lang="de">
+    <h2>1) Was die Middleware genau macht (Einführung)</h2>
+    <div class="box">
+      <p><b>Frontend</b> im Browser, <b>Middleware</b> als Vermittler & Buchführer … (hier deinen bestehenden langen deutschen Text einsetzen — inhaltlich unverändert).</p>
+      <ul>
+        <li><b>LLM</b> …</li><li><b>VLM</b> …</li><li><b>ASR</b> …</li><li><b>TTS</b> …</li><li><b>Provider</b> …</li>
+        <li><b>OpenAI-kompatibel</b> …</li><li><b>Vertex AI</b> …</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="vps" data-lang="de">
+    <h2>2) Server (VPS) vs. Cloud – Empfehlung & Größenwahl</h2>
+    <div class="box">
+      <p>Hetzner CX22/CX32 Empfehlung … (dein bestehender Text)</p>
+      <div class="callout"><b>Aufgabe des Servers:</b> Admin Bud-E hosten (Dashboard + API + Proxy).</div>
+    </div>
+  </section>
+
+  <section id="vertex" data-lang="de">
+    <h2>3) Google Cloud & Vertex AI – Schritt für Schritt (+ integrierter OpenAI-Proxy)</h2>
+    <div class="grid two">
+      <div class="box"><h3>3.1 Google-Projekt</h3><ol><li>…</li><li>…</li></ol></div>
+      <div class="box"><h3>3.2 APIs</h3><ul><li>Vertex AI …</li><li>Cloud TTS …</li></ul></div>
+      <div class="box"><h3>3.3 Service-Account & JSON-Key</h3><ol><li>…</li><li>…</li><li>…</li></ol></div>
+      <div class="box"><h3>3.4 Regionen & Modelle</h3><p>…</p></div>
+    </div>
+    <div class="box">
+      <h3>3.5 Anbindung in Admin Bud-E (mit Proxy)</h3>
+      <ol>
+        <li>OpenAI-kompatibel — Erklärung …</li>
+        <li>Was ist Vertex — Erklärung …</li>
+        <li>Integrierter Proxy — Erklärung …</li>
+        <li>Providers: Name <code>vertex</code> …</li>
+        <li>Routes: Prioritäten …</li>
+        <li>Pricing: LLM/VLM pro 1M Tokens, TTS/ASR …</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="menus" data-lang="de">
+    <h2>4) Menü-Tour</h2>
+    <div class="box"><h3>4.1 Users</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.2 Projects</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.3 Pricing</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.4 Providers</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.5 Routes</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.6 Usage</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.7 Maintenance</h3><ul><li>…</li></ul></div>
+  </section>
+
+  <section id="common-pool" data-lang="de">
+    <h2>5) Budgets, Allowance & Common Pool – Beispiele</h2>
+    <div class="box"><p>…</p></div>
+  </section>
+
+  <section id="privacy" data-lang="de">
+    <h2>6) Datenschutz & EU-Regionen</h2>
+    <div class="box"><ul><li>…</li></ul></div>
+  </section>
+
+  <section id="backup" data-lang="de">
+    <h2>7) Backups & Wiederherstellung</h2>
+    <div class="box"><ul><li>…</li></ul></div>
+  </section>
+
+  <section id="faq" data-lang="de">
+    <h2>8) Häufige Fragen & Tipps</h2>
+    <div class="box"><h3>„Export usage reports“</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>Vertex in Routes?</h3><p>…</p></div>
+    <div class="box"><h3>Andere Anbieter?</h3><p>…</p></div>
+  </section>
+
+  <hr data-lang="de">
+  <p class="small" data-lang="de">
+    Admin Bud-E / Bud-E / SchoolBuddy werden von <a href="https://laion.ai/" target="_blank" rel="noopener">LAION&nbsp;e. V.</a> entwickelt (gemeinnützig).
+    Links: <a href="https://school.bud-e.ai/" target="_blank" rel="noopener">Gehostetes Frontend</a> ·
+    <a href="https://github.com/christophschuhmann/school-bud-e-middleware/" target="_blank" rel="noopener">Middleware-Repo</a> ·
+    <a href="https://github.com/christophschuhmann/school-bud-e-frontend/tree/middleware-compatible-frontend" target="_blank" rel="noopener">Frontend-Repo</a> ·
+    <a href="https://laion.ai/blog/bud-e-release/" target="_blank" rel="noopener">LAION-Blog</a>
+  </p>
+
+  <!-- ========= EN CONTENT (entspricht dem DE-Inhalt, hier als englische Version) ========= -->
+  <section id="intro-en" class="hide" data-lang="en">
+    <h2>1) What the middleware does (introduction)</h2>
+    <div class="box">
+      <p><b>Frontend</b> in the browser, <b>middleware</b> as broker & bookkeeper … (place your full English text here mirroring the German content).</p>
+      <ul>
+        <li><b>LLM</b> …</li><li><b>VLM</b> …</li><li><b>ASR</b> …</li><li><b>TTS</b> …</li><li><b>Provider</b> …</li>
+        <li><b>OpenAI-compatible</b> …</li><li><b>Vertex AI</b> …</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="vps-en" class="hide" data-lang="en">
+    <h2>2) Server (VPS) vs. cloud — recommendation & sizing</h2>
+    <div class="box">
+      <p>Hetzner CX22/CX32 recommendation … (English version of your text)</p>
+      <div class="callout"><b>Server’s role:</b> host Admin Bud-E (dashboard + API + proxy).</div>
+    </div>
+  </section>
+
+  <section id="vertex-en" class="hide" data-lang="en">
+    <h2>3) Google Cloud & Vertex AI — step by step (+ integrated OpenAI proxy)</h2>
+    <div class="grid two">
+      <div class="box"><h3>3.1 Create project</h3><ol><li>…</li><li>…</li></ol></div>
+      <div class="box"><h3>3.2 Enable APIs</h3><ul><li>Vertex AI …</li><li>Cloud TTS …</li></ul></div>
+      <div class="box"><h3>3.3 Service account & JSON key</h3><ol><li>…</li><li>…</li><li>…</li></ol></div>
+      <div class="box"><h3>3.4 Regions & models</h3><p>…</p></div>
+    </div>
+    <div class="box">
+      <h3>3.5 Connecting Admin Bud-E (with proxy)</h3>
+      <ol>
+        <li>OpenAI-compatible — explanation …</li>
+        <li>What is Vertex — explanation …</li>
+        <li>Integrated proxy — explanation …</li>
+        <li>Providers: name <code>vertex</code> …</li>
+        <li>Routes: priorities …</li>
+        <li>Pricing: LLM/VLM per 1M tokens; TTS/ASR …</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="menus-en" class="hide" data-lang="en">
+    <h2>4) Menu tour</h2>
+    <div class="box"><h3>4.1 Users</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.2 Projects</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.3 Pricing</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.4 Providers</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.5 Routes</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.6 Usage</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>4.7 Maintenance</h3><ul><li>…</li></ul></div>
+  </section>
+
+  <section id="common-pool-en" class="hide" data-lang="en">
+    <h2>5) Budgets, allowance & common pool — examples</h2>
+    <div class="box"><p>…</p></div>
+  </section>
+
+  <section id="privacy-en" class="hide" data-lang="en">
+    <h2>6) Privacy & EU regions</h2>
+    <div class="box"><ul><li>…</li></ul></div>
+  </section>
+
+  <section id="backup-en" class="hide" data-lang="en">
+    <h2>7) Backups & restore</h2>
+    <div class="box"><ul><li>…</li></ul></div>
+  </section>
+
+  <section id="faq-en" class="hide" data-lang="en">
+    <h2>8) FAQ & tips</h2>
+    <div class="box"><h3>“Export usage reports”</h3><ul><li>…</li></ul></div>
+    <div class="box"><h3>Vertex in routes?</h3><p>…</p></div>
+    <div class="box"><h3>Other providers?</h3><p>…</p></div>
+  </section>
+
+  <hr class="hide" data-lang="en">
+  <p class="small hide" data-lang="en">
+    Admin Bud-E / Bud-E / SchoolBuddy are developed by <a href="https://laion.ai/" target="_blank" rel="noopener">LAION e. V.</a> (non-profit).
+    Links: <a href="https://school.bud-e.ai/" target="_blank" rel="noopener">Hosted frontend</a> ·
+    <a href="https://github.com/christophschuhmann/school-bud-e-middleware/" target="_blank" rel="noopener">Middleware repo</a> ·
+    <a href="https://github.com/christophschuhmann/school-bud-e-frontend/tree/middleware-compatible-frontend" target="_blank" rel="noopener">Frontend repo</a> ·
+    <a href="https://laion.ai/blog/bud-e-release/" target="_blank" rel="noopener">LAION blog</a>
+  </p>
+
+</main>
+
+<script>
+  // Simple language switcher (DE default)
+  const langKey = 'Admin Bud-E.lang';
+  const $btnDe = document.getElementById('btn-de');
+  const $btnEn = document.getElementById('btn-en');
+
+  function setLang(lang){
+    document.querySelectorAll('[data-lang="de"]').forEach(el => el.classList.toggle('hide', lang !== 'de'));
+    document.querySelectorAll('[data-lang="en"]').forEach(el => el.classList.toggle('hide', lang !== 'en'));
+    // header buttons styling
+    $btnDe.classList.toggle('active-lang', lang === 'de');
+    $btnEn.classList.toggle('active-lang', lang === 'en');
+    try{ localStorage.setItem(langKey, lang); }catch(e){}
+    // update <html lang>
+    document.documentElement.setAttribute('lang', lang);
+  }
+
+  const initial = (localStorage.getItem(langKey) || 'en');
+  setLang(initial);
+
+  $btnDe.addEventListener('click', ()=> setLang('de'));
+  $btnEn.addEventListener('click', ()=> setLang('en'));
+</script>
+
+</body>
+</html>

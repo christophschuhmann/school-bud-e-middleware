@@ -9,3 +9,124 @@
 [2025-09-25 10:39:27,275] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
 [2025-09-25 10:39:28,405] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
 [2025-09-25 10:39:28,726] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=850 out_tokens=33 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 13:50:22,924] INFO [CHAT] incoming model= stream=True
+[2025-09-25 13:50:22,924] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 13:50:22,924] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 13:50:22,924] INFO [ROUTE] _has_pdf=False
+[2025-09-25 13:50:22,924] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 13:50:22,925] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 13:50:22,925] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 13:50:22,926] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 13:50:22,948] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 13:50:24,923] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 13:50:28,093] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=886 out_tokens=437 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 13:55:25,077] INFO [CHAT] incoming model= stream=True
+[2025-09-25 13:55:25,077] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 13:55:25,077] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 13:55:25,078] INFO [ROUTE] _has_pdf=False
+[2025-09-25 13:55:25,078] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 13:55:25,078] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 13:55:25,078] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 13:55:25,078] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 13:55:25,101] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 13:55:31,275] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 13:55:32,436] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=964 out_tokens=269 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 13:56:09,848] INFO [CHAT] incoming model= stream=True
+[2025-09-25 13:56:09,849] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}, {"role": "assistant", "string_len": 1235, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 13:56:09,849] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 13:56:09,849] INFO [ROUTE] _has_pdf=False
+[2025-09-25 13:56:09,849] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 13:56:09,850] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 13:56:09,850] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 13:56:09,850] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 13:56:09,872] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 13:56:22,020] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 13:56:23,501] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=1267 out_tokens=273 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 13:57:14,218] INFO [CHAT] incoming model= stream=True
+[2025-09-25 13:57:14,218] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}, {"role": "assistant", "string_len": 1235, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}, {"role": "assistant", "string_len": 1291, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 13:57:14,219] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 13:57:14,219] INFO [ROUTE] _has_pdf=False
+[2025-09-25 13:57:14,219] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 13:57:14,220] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 13:57:14,220] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 13:57:14,220] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 13:57:14,243] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 13:57:22,366] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 13:57:23,180] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=5383 out_tokens=268 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 14:10:16,515] INFO [CHAT] incoming model= stream=True
+[2025-09-25 14:10:16,515] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 14:10:16,515] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 14:10:16,515] INFO [ROUTE] _has_pdf=False
+[2025-09-25 14:10:16,515] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 14:10:16,516] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 14:10:16,516] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 14:10:16,516] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 14:10:16,539] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 14:10:17,848] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 14:10:18,179] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=870 out_tokens=51 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 14:10:41,500] INFO [CHAT] incoming model= stream=True
+[2025-09-25 14:10:41,500] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 14:10:41,500] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 14:10:41,501] INFO [ROUTE] _has_pdf=False
+[2025-09-25 14:10:41,501] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 14:10:41,501] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 14:10:41,501] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 14:10:41,501] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 14:10:41,524] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 14:10:42,218] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 14:10:42,931] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=870 out_tokens=82 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 14:12:45,636] INFO [CHAT] incoming model= stream=True
+[2025-09-25 14:12:45,636] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 14:12:45,637] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 14:12:45,637] INFO [ROUTE] _has_pdf=False
+[2025-09-25 14:12:45,637] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 14:12:45,637] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 14:12:45,637] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 14:12:45,638] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 14:12:45,660] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 14:12:46,384] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 14:12:46,822] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=858 out_tokens=72 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 14:16:59,256] INFO [CHAT] incoming model= stream=True
+[2025-09-25 14:16:59,256] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 14:16:59,257] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 14:16:59,257] INFO [ROUTE] _has_pdf=False
+[2025-09-25 14:16:59,257] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 14:16:59,257] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 14:16:59,257] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 14:16:59,258] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 14:16:59,280] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 14:17:01,311] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 14:17:01,592] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=857 out_tokens=34 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 14:17:22,461] INFO [CHAT] incoming model= stream=True
+[2025-09-25 14:17:22,461] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}, {"role": "assistant", "string_len": 126, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 14:17:22,462] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 14:17:22,462] INFO [ROUTE] _has_pdf=False
+[2025-09-25 14:17:22,462] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 14:17:22,462] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 14:17:22,462] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 14:17:22,463] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 14:17:22,485] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 14:17:23,291] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 14:17:23,487] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=905 out_tokens=12 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 14:17:25,423] INFO [CHAT] incoming model= stream=True
+[2025-09-25 14:17:25,423] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}, {"role": "assistant", "string_len": 126, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}, {"role": "assistant", "string_len": 47, "parts": []}, {"role": "assistant", "string_len": 4022, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 14:17:25,423] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 14:17:25,424] INFO [ROUTE] _has_pdf=False
+[2025-09-25 14:17:25,424] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 14:17:25,424] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 14:17:25,424] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 14:17:25,424] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 14:17:25,447] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 14:17:31,238] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 14:17:33,043] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=2012 out_tokens=368 tried=['vertex:gemini-2.5-flash']
+[2025-09-25 14:19:22,621] INFO [CHAT] incoming model= stream=True
+[2025-09-25 14:19:22,621] INFO [CHAT] messages summary: [{"role": "system", "string_len": 1720, "parts": []}, {"role": "assistant", "string_len": 82, "parts": []}, {"role": "user", "string_len": null, "parts": [{"type": "text", "mime": "", "has_data": false, "data_len": null, "has_image_url": false, "image_url_is_dataurl": false}]}]
+[2025-09-25 14:19:22,621] INFO [ROUTE] _looks_like_vlm=False -> route_kind=LLM
+[2025-09-25 14:19:22,621] INFO [ROUTE] _has_pdf=False
+[2025-09-25 14:19:22,621] INFO [ROUTE] initial routes found=2 -> ['vertex:gemini-2.5-flash', 'gemini:gemini-2.0-flash-001']
+[2025-09-25 14:19:22,622] INFO [ROUTE] ordered candidates=[('vertex', 'gemini-2.5-flash'), ('gemini', 'gemini-2.0-flash-001')]
+[2025-09-25 14:19:22,622] INFO [PROV] provider map: ['Groq', 'Fish', 'gemini', 'parasail', 'vertex', 'vertex-2', 'vertex-3']
+[2025-09-25 14:19:22,622] INFO [UPSTREAM] do_stream_call provider=vertex model=gemini-2.5-flash has_pdf=False
+[2025-09-25 14:19:22,645] INFO [OPENAI] STREAM to http://localhost:8001/v1/chat/completions
+[2025-09-25 14:19:23,650] INFO [RUN] streaming from provider=vertex model=gemini-2.5-flash
+[2025-09-25 14:19:24,988] INFO [BILL] provider=vertex model=gemini-2.5-flash in_tokens=863 out_tokens=304 tried=['vertex:gemini-2.5-flash']
