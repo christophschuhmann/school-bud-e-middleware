@@ -1,4 +1,3 @@
-
 fastapi==0.111.0
 uvicorn[standard]==0.30.1
 httpx==0.27.0
@@ -6,4 +5,7 @@ SQLAlchemy==2.0.30
 asyncpg==0.29.0
 aiosqlite==0.20.0
 python-dotenv==1.0.1
-
+python-multipart==0.0.9
+bcrypt==4.1.2
+google-cloud-aiplatform==1.70.0
+google-cloud-texttospeech==2.20.0
