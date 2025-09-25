@@ -18,8 +18,8 @@ from models import (
     ModelPricing,
     ModelType,
     UsageLog,
+    CreditLedger,   # <-- ADDED: to write ledger rows
 )
-
 
 # ---------------------- Utilities ----------------------
 
@@ -57,6 +57,20 @@ async def log_usage(
         response_meta=response_meta or {},
     )
     session.add(ul)
+
+
+# ---------------------- Ledger helper (ADDED) ----------------------
+
+async def _log_ledger(
+    session: AsyncSession, *,
+    user_id: int,
+    delta: Decimal,
+    reason: str
+) -> None:
+    """
+    Append a row to CreditLedger. Call this ONLY when user.credits changes.
+    """
+    session.add(CreditLedger(user_id=user_id, delta=Decimal(str(delta)), reason=reason))
 
 
 # ---------------------- CommonPool debit ----------------------
@@ -155,6 +169,14 @@ async def debit_credits(session: AsyncSession, user: User, cost: Decimal, model:
             take = min(need, Decimal(user.credits or 0))
             if take > 0:
                 user.credits = Decimal(user.credits or 0) - take
+                # ---------- ADDED: ledger row for actual user spend ----------
+                await _log_ledger(
+                    session,
+                    user_id=user.id,
+                    delta=-take,
+                    reason=f"spend:{provider}:{model}"
+                )
+                # -------------------------------------------------------------
                 need -= take
 
         if need > 0:
@@ -168,6 +190,14 @@ async def debit_credits(session: AsyncSession, user: User, cost: Decimal, model:
     take = min(need, Decimal(user.credits or 0))
     if take > 0:
         user.credits = Decimal(user.credits or 0) - take
+        # ---------- ADDED: ledger row for actual user spend ----------
+        await _log_ledger(
+            session,
+            user_id=user.id,
+            delta=-take,
+            reason=f"spend:{provider}:{model}"
+        )
+        # -------------------------------------------------------------
         need -= take
 
     if need > 0 and project:

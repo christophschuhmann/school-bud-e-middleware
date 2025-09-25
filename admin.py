@@ -744,15 +744,34 @@ async def create_or_rotate_key(user_id: int, session: AsyncSession = Depends(get
     await session.commit()
     return {"api_key": public}
 
+# ---- Ledger helper -----------------------------------------------------------
+from decimal import Decimal
+
+async def _log_ledger(session: AsyncSession, *, user_id: int, delta: Decimal, reason: str = "") -> None:
+    """Append a row to the CreditLedger."""
+    session.add(CreditLedger(user_id=user_id, delta=Decimal(str(delta)), reason=reason))
+
+
+
 @router.post("/users/{user_id}/credits")
 async def set_credits(user_id: int, credits: float = Form(...), session: AsyncSession = Depends(get_session)):
     u = await session.get(User, user_id)
     if not u:
         raise HTTPException(404, "User not found")
-    u.credits = Decimal(str(credits))
+
+    old = Decimal(str(u.credits or 0))
+    new = Decimal(str(credits))
+    delta = new - old
+
+    u.credits = new
     session.add(u)
+
+    # NEW: write a ledger entry so the Admin "Ledger" page has something to show
+    await _log_ledger(session, user_id=u.id, delta=delta, reason="admin:set_credits")
+
     await session.commit()
     return {"ok": True, "credits": str(u.credits)}
+
 
 @router.post("/users/{user_id}/project")
 async def assign_project(user_id: int, project_id: int | None = Form(None), session: AsyncSession = Depends(get_session)):

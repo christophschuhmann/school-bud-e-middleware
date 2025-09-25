@@ -59,7 +59,6 @@
     <a href="#providers" id="tab-providers">Providers</a>
     <a href="#routes" id="tab-routes">Routes</a>
     <a href="#usage" id="tab-usage">Usage</a>
-    <a href="#ledger" id="tab-ledger">Ledger</a>
     <a href="#maintenance" id="tab-maintenance">Maintenance</a>
   </nav>
 </header>
@@ -334,17 +333,76 @@
   <!-- USAGE -->
   <section id="view-usage" class="card" style="display:none">
     <h2>Usage</h2>
+<!-- FILTER / SORT -->
+<div class="group">
+  <h3>Filter &amp; sort</h3>
+  <div class="row">
+    <input id="us-project" class="narrow" placeholder="project_id (opt)">
+    <input id="us-user" class="narrow" placeholder="user_id (opt)">
+    <input id="us-start" class="narrow" placeholder="start YYYY-MM-DD (opt)">
+    <input id="us-end" class="narrow" placeholder="end YYYY-MM-DD (opt)">
+    <input id="us-limit" class="narrow" placeholder="limit (opt)">
+
+    <select id="us-sort">
+      <option value="created_at">sort: created_at</option>
+      <option value="billed">sort: billed</option>
+      <option value="input">sort: input</option>
+      <option value="output">sort: output</option>
+      <option value="provider">sort: provider</option>
+      <option value="model">sort: model</option>
+    </select>
+    <select id="us-order">
+      <option value="desc">desc</option>
+      <option value="asc">asc</option>
+    </select>
+    <button onclick="applyUsageFilter()">Apply</button>
+    <button class="secondary" onclick="clearUsageFilter()">Clear</button>
+    <button class="secondary" onclick="exportCurrentView()">Export current view (PDF)</button>
+
+  </div>
+  <div class="hint">Tip: set only one of project_id or user_id. If both are set, the backend ignores project_id when user_id is present.</div>
+</div>
+
+
+<div class="group">
+  <h3>Export usage reports</h3>
+  <div class="row">
+    <input id="exp-project" class="narrow" placeholder="project_id (opt)">
+    <input id="exp-user" class="narrow" placeholder="user_id (opt)">
+    <input id="exp-start" class="narrow" placeholder="start YYYY-MM-DD (opt)">
+    <input id="exp-end" class="narrow" placeholder="end YYYY-MM-DD (opt)">
+<!-- inside the Export usage reports block, under the 4 inputs -->
+<div class="row">
+  <button class="ghost" onclick="presetRange('last7')">Last 7 days</button>
+  <button class="ghost" onclick="presetRange('last30')">Last 30 days</button>
+  <button class="ghost" onclick="presetRange('thisMonth')">This month</button>
+  <button class="ghost" onclick="presetRange('lastMonth')">Last month</button>
+  <button class="ghost" onclick="presetRange('thisYear')">This year</button>
+  <button class="ghost" onclick="presetRange('lastYear')">Last year</button>
+  <span class="spacer"></span>
+  <button onclick="previewExport()" title="Copy these fields into Filter & sort and apply">Preview</button>
+</div>
+
+<div class="hint" style="margin-top:6px">
+  <b>What gets exported?</b> The PDF is an <i>aggregated overview</i> (per user, per model type) for the selected scope
+  (project or user) and period. <b>Bulk ZIP (projects)</b> creates one overview file per project for the same period
+  (it ignores <code>user_id</code>).<br/>
+  <b>Date range:</b> If you leave <i>start</i> and <i>end</i> empty, the system uses the <i>current calendar month</i>
+  (start = 1st of the month, end = 1st of next month). Set only <code>user_id</code> <i>or</i> <code>project_id</code>
+  — if both are set, <code>user_id</code> wins.
+</div>
+
+
+    <button onclick="exportUsagePDF()">Export PDF</button>
+    <button class="secondary" onclick="exportUsageBulkZip()">Bulk ZIP (projects)</button>
+  </div>
+  <div class="hint">Leave both project_id and user_id empty for a global overview. If both are set, user_id wins.</div>
+</div>
+
+
     <table id="tbl-usage"><thead><tr>
       <th>id</th><th>user_id</th><th>provider</th><th>model</th><th>type</th>
       <th>input</th><th>output</th><th>billed</th><th>created_at</th>
-    </tr></thead><tbody></tbody></table>
-  </section>
-
-  <!-- LEDGER -->
-  <section id="view-ledger" class="card" style="display:none">
-    <h2>Ledger</h2>
-    <table id="tbl-ledger"><thead><tr>
-      <th>id</th><th>user_id</th><th>delta</th><th>reason</th><th>created_at</th>
     </tr></thead><tbody></tbody></table>
   </section>
 
@@ -461,6 +519,93 @@ function getSelectedIds(table) {
   document.querySelectorAll(`#tbl-${table} tbody input[type=checkbox]:checked`).forEach(x => ids.push(x.dataset.id));
   return ids.join(",");
 }
+
+function buildQuery(params){
+  const pairs = Object.entries(params)
+    .filter(([_, v]) => v != null && v !== "")
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
+  return pairs.length ? "?" + pairs.join("&") : "";
+}
+function openDownload(url){
+  window.open(url, "_blank");
+}
+
+// ---- date helpers for presets ----
+function fmtDate(d){ // YYYY-MM-DD
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+function firstOfNextMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 1); }
+
+function presetRange(kind){
+  const startEl = q("#exp-start");
+  const endEl   = q("#exp-end");
+  const now = new Date();
+  let s=null, e=null;
+
+  if (kind === "last7"){
+    const end = new Date(now);              // exclusive end = tomorrow 00:00
+    end.setDate(end.getDate()+1);
+    const start = new Date(end); start.setDate(start.getDate()-7);
+    s = fmtDate(start); e = fmtDate(end);
+  } else if (kind === "last30"){
+    const end = new Date(now); end.setDate(end.getDate()+1);
+    const start = new Date(end); start.setDate(start.getDate()-30);
+    s = fmtDate(start); e = fmtDate(end);
+  } else if (kind === "thisMonth"){
+    const start = firstOfMonth(now);
+    const end = firstOfNextMonth(now);
+    s = fmtDate(start); e = fmtDate(end);
+  } else if (kind === "lastMonth"){
+    const curFirst = firstOfMonth(now);
+    const start = new Date(curFirst.getFullYear(), curFirst.getMonth()-1, 1);
+    const end = curFirst;
+    s = fmtDate(start); e = fmtDate(end);
+  } else if (kind === "thisYear"){
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = new Date(now.getFullYear()+1, 0, 1);
+    s = fmtDate(start); e = fmtDate(end);
+  } else if (kind === "lastYear"){
+    const start = new Date(now.getFullYear()-1, 0, 1);
+    const end = new Date(now.getFullYear(), 0, 1);
+    s = fmtDate(start); e = fmtDate(end);
+  }
+  if (startEl) startEl.value = s || "";
+  if (endEl)   endEl.value   = e || "";
+}
+
+function previewExport(){
+  // take values from Export block...
+  const p = q("#exp-project")?.value.trim();
+  const u = q("#exp-user")?.value.trim();
+  const s = q("#exp-start")?.value.trim();
+  const e = q("#exp-end")?.value.trim();
+  // ...and copy them into the Filter & sort inputs
+  if (q("#us-project")) q("#us-project").value = p || "";
+  if (q("#us-user"))    q("#us-user").value    = u || "";
+  if (q("#us-start"))   q("#us-start").value   = s || "";
+  if (q("#us-end"))     q("#us-end").value     = e || "";
+  // keep any existing limit/sort as the user set them
+  applyUsageFilter();
+}
+
+function exportCurrentView(){
+  const project_id = q("#us-project")?.value.trim();
+  const user_id    = q("#us-user")?.value.trim();
+  const start      = q("#us-start")?.value.trim();
+  const end        = q("#us-end")?.value.trim();
+  const query = buildQuery({
+    project_id: (user_id ? null : (project_id || null)), // ignore project if user is set
+    user_id: user_id || null,
+    start: start || null,
+    end: end || null
+  });
+  openDownload(`/admin/usage/overview/pdf${query}`);
+}
+
 function toCSVdownload(text, filename){
   const blob = new Blob([text], {type:"text/csv"});
   const a = document.createElement("a");
@@ -469,6 +614,86 @@ function toCSVdownload(text, filename){
 }
 
 /* ---------- USERS ---------- */
+function buildUsageParams(){
+  const project_id = q("#us-project")?.value.trim();
+  const user_id    = q("#us-user")?.value.trim();
+  const start      = q("#us-start")?.value.trim();
+  const end        = q("#us-end")?.value.trim();
+  const limit      = q("#us-limit")?.value.trim();
+  const sort       = q("#us-sort")?.value || "created_at";
+  const order      = q("#us-order")?.value || "desc";
+  return { project_id, user_id, start, end, limit, sort, order };
+}
+
+function _usageSortKey(row, key){
+  if (key === "billed"){
+    const n = parseFloat(row.billed || "0");
+    return isFinite(n) ? n : 0;
+  }
+  if (key === "input" || key === "output"){
+    return parseInt(row[key] || "0", 10) || 0;
+  }
+  if (key === "created_at"){
+    // ISO strings compare lexicographically, but make it robust:
+    return new Date(row.created_at || 0).getTime() || 0;
+  }
+  // provider/model or fallback
+  return (row[key] || "").toLowerCase();
+}
+
+async function applyUsageFilter(){
+  const { project_id, user_id, start, end, limit, sort, order } = buildUsageParams();
+
+  // Build query for /admin/usage/connections
+  const qp = new URLSearchParams();
+  if (user_id) qp.set("user_id", user_id);
+  else if (project_id) qp.set("project_id", project_id);
+  if (start) qp.set("start", start);
+  if (end) qp.set("end", end);
+  if (limit) qp.set("limit", limit);
+
+  const res = await api(`/admin/usage/connections${qp.toString()?("?" + qp.toString()):""}`);
+
+  // res.items is the list; sort client-side
+  const items = Array.isArray(res.items) ? [...res.items] : [];
+  items.sort((a,b)=>{
+    const ka = _usageSortKey(a, sort);
+    const kb = _usageSortKey(b, sort);
+    if (ka < kb) return (order === "asc" ? -1 : 1);
+    if (ka > kb) return (order === "asc" ?  1 : -1);
+    // tiebreaker by created_at
+    const ta = _usageSortKey(a, "created_at");
+    const tb = _usageSortKey(b, "created_at");
+    if (ta < tb) return (order === "asc" ? -1 : 1);
+    if (ta > tb) return (order === "asc" ?  1 : -1);
+    return 0;
+  });
+
+  // Render
+  const tb = q("#tbl-usage tbody"); tb.innerHTML = "";
+  items.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${r.user_id}</td>
+      <td>${r.provider||""}</td>
+      <td>${r.model||""}</td>
+      <td>${r.model_type||""}</td>
+      <td>${r.input||0}</td>
+      <td>${r.output||0}</td>
+      <td class="mono">${r.billed||"0"}</td>
+      <td>${r.created_at||""}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function clearUsageFilter(){
+  ["#us-project","#us-user","#us-start","#us-end","#us-limit"].forEach(id => { const el=q(id); if (el) el.value=""; });
+  if (q("#us-sort"))  q("#us-sort").value = "created_at";
+  if (q("#us-order")) q("#us-order").value = "desc";
+  applyUsageFilter();
+}
+
 async function loadUsers(params={}) {
   const search = new URLSearchParams(params).toString();
   const res = await api(`/admin/users${search?("?" + search):""}`);
@@ -817,6 +1042,23 @@ async function resetRoutes(){
 }
 
 /* ---------- USAGE / LEDGER ---------- */
+function exportUsagePDF(){
+  const p = q("#exp-project").value.trim();
+  const u = q("#exp-user").value.trim();
+  const s = q("#exp-start").value.trim();
+  const e = q("#exp-end").value.trim();
+  const query = buildQuery({ project_id: p || null, user_id: u || null, start: s || null, end: e || null });
+  openDownload(`/admin/usage/overview/pdf${query}`);
+}
+
+function exportUsageBulkZip(){
+  const s = q("#exp-start").value.trim();
+  const e = q("#exp-end").value.trim();
+  const query = buildQuery({ start: s || null, end: e || null });
+  openDownload(`/admin/usage/overview/bulk_zip${query}`);
+}
+
+
 async function loadUsage(){
   const res = await api("/admin/usage");
   const tb = q("#tbl-usage tbody"); tb.innerHTML="";
@@ -870,8 +1112,8 @@ async function reloadAll(){
     loadPricing(),
     loadProviders(),
     loadRoutes(),
-    loadUsage(),
-    loadLedger(),
+    applyUsageFilter(),   // <-- was loadUsage()
+    // loadLedger(),      // we'll remove this if you drop Ledger
   ]).catch(e=> toast("Load error: "+e.message));
 }
 
