@@ -273,6 +273,23 @@ async def _periodic_sqlite_backup(interval_sec: int = 600, keep: int = 10):
         # graceful shutdown of the task
         return
 
+# ---- DB location announcer (safe to call anytime) ---------------------------
+def announce_db_location(prefix: str = "[DB]") -> None:
+    try:
+        print(f"{prefix} DATABASE_URL = {DATABASE_URL!r}")
+        if IS_SQLITE:
+            # SQLite: show resolved file path and whether it exists
+            print(f"{prefix} mode        = sqlite (aiosqlite)")
+            print(f"{prefix} file        = {SQLITE_FILE}  (exists: {SQLITE_FILE.exists()})")
+            print(f"{prefix} data_dir    = {DATA_DIR}")
+            print(f"{prefix} backup_dir  = {BACKUP_DIR}")
+        else:
+            # Non-SQLite (e.g., Postgres)
+            print(f"{prefix} mode        = external DB (not a local .db file)")
+    except Exception as e:
+        print(f"{prefix} error while reporting DB location: {e}")
+
+
 def start_backup_task(interval_sec: int = 600, keep: int = 10):
     # start only once
     global _backup_task

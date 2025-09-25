@@ -37,6 +37,7 @@ except NameError:
 if isinstance(BASE_DATA_DIR, str):
     BASE_DATA_DIR = Path(BASE_DATA_DIR)
 
+
 TRACE_DIR = BASE_DATA_DIR / "logs"
 TRACE_DIR.mkdir(parents=True, exist_ok=True)
 

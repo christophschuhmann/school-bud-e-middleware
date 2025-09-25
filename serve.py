@@ -28,6 +28,8 @@ from typing import Dict, List, Tuple, Optional, Set
 import uvicorn
 from main import app
 from admin import router as admin_router
+from db import announce_db_location
+
 
 app.include_router(admin_router)
 
@@ -410,6 +412,11 @@ def _print_admin_urls(host: str, port: int):
 # Main entry (interactive)
 # -------------------------
 if __name__ == "__main__":
+
+
+    print(f"[serve] starting middleware on http://{HOST}:{PORT}/")
+    announce_db_location("[DB]")  # <-- prints the effective DB path/mode
+
     # Prevent double-starts
     if PID_FILE.exists():
         try:
